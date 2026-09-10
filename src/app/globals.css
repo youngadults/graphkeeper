@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cytoscape canvas fills its positioned wrapper. */
+.gk-canvas {
+  position: absolute;
+  inset: 0;
+  background-color: #f8fafc;
+}
+
+.gk-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.gk-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.gk-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes gk-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.gk-toast {
+  animation: gk-toast-in 180ms ease-out;
+}
