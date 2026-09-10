@@ -93,4 +93,11 @@ export const api = {
 
   restoreEdge: (id: string, actorId: string): Promise<GraphEdge> =>
     request<GraphEdge>(`/api/edges/${id}/restore`, { method: "POST", actorId }),
+
+  generateProposals: (count: number, actorId: string): Promise<{ count: number; proposals: GraphEdge[] }> =>
+    request<{ count: number; proposals: GraphEdge[] }>("/api/proposals/generate", {
+      method: "POST",
+      body: { count },
+      actorId,
+    }),
 };

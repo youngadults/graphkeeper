@@ -8,7 +8,8 @@ import { useWorkspace } from "@/components/workspace/WorkspaceProvider";
 
 /** Pending review queue — approve, reject, or open an edge to edit-then-approve. */
 export default function ReviewQueue() {
-  const { graph, pendingCount, reviewEdge, restoreEdge, select, actorInfo, canWrite } = useWorkspace();
+  const { graph, pendingCount, reviewEdge, restoreEdge, generateProposals, select, actorInfo, canWrite } = useWorkspace();
+  const [generating, setGenerating] = useState(false);
 
   if (!graph) return null;
 
@@ -20,13 +21,37 @@ export default function ReviewQueue() {
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
 
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      await generateProposals(5);
+    } catch {
+      // error toast already shown by the provider
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div className="flex flex-col">
-      <p className="px-4 pt-3 text-xs text-slate-500">
-        {pendingCount === 0
-          ? "Nothing waiting for review."
-          : `${pendingCount} relationship${pendingCount === 1 ? "" : "s"} waiting — approve, reject, or open to edit-then-approve.`}
-      </p>
+      <div className="flex items-center gap-2 px-4 pt-3">
+        <p className="text-xs text-slate-500">
+          {pendingCount === 0
+            ? "Nothing waiting for review."
+            : `${pendingCount} relationship${pendingCount === 1 ? "" : "s"} waiting — approve, reject, or open to edit-then-approve.`}
+        </p>
+        {canWrite && (
+          <button
+            type="button"
+            disabled={generating}
+            onClick={handleGenerate}
+            className="ml-auto shrink-0 rounded-md border border-violet-200 px-2.5 py-1 text-xs font-medium text-violet-700 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Ask the simulated AI to propose new relationships from existing nodes"
+          >
+            {generating ? "Generating…" : "Generate proposals"}
+          </button>
+        )}
+      </div>
       {pending.length === 0 ? (
         <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
           <span className="text-3xl">🎉</span>

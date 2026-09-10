@@ -74,6 +74,7 @@ interface WorkspaceContextValue {
   deleteEdge: (id: string) => Promise<GraphEdge>;
   reviewEdge: (id: string, action: "approve" | "reject") => Promise<GraphEdge>;
   restoreEdge: (id: string) => Promise<GraphEdge>;
+  generateProposals: (count: number) => Promise<{ count: number; proposals: GraphEdge[] }>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -198,6 +199,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       reviewEdge: (id: string, action: "approve" | "reject") =>
         run((actorId) => api.reviewEdge(id, action, actorId), action === "approve" ? "Approved." : "Rejected."),
       restoreEdge: (id: string) => run((actorId) => api.restoreEdge(id, actorId), "Back to pending review."),
+      generateProposals: (count: number) =>
+        run((actorId) => api.generateProposals(count, actorId), "Sim AI proposals generated."),
     };
   }, [run]);
 

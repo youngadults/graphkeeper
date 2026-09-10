@@ -55,6 +55,10 @@ export const reviewSchema = z.object({
   action: z.enum(["approve", "reject"]),
 });
 
+export const generateProposalsSchema = z.object({
+  count: z.coerce.number().int().min(1).max(10).default(5),
+});
+
 export const activityQuerySchema = z.object({
   entityType: z.enum(ENTITY_TYPES).optional(),
   entityId: z.uuid("entityId must be a uuid").optional(),
