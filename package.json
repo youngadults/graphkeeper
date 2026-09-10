@@ -1,0 +1,45 @@
+{
+  "name": "graphkeeper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A visual, collaborative governance and review layer over knowledge graphs — propose, review, approve, and audit every relationship.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:push": "drizzle-kit push",
+    "db:seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "cytoscape": "^3.34.3",
+    "drizzle-orm": "^0.45.2",
+    "next": "^15.5.25",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^4.6.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
+    "@next/eslint-plugin-next": "^15.5.25",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.20.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.25",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
