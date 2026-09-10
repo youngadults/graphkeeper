@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { POST } from "@/app/api/proposals/generate/route";
-import { getStore } from "@/lib/db";
 import { buildSeedGraph } from "@/lib/db/seed-data";
 import { SIM_AI } from "@/lib/domain/types";
 
