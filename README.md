@@ -19,7 +19,9 @@ recorded in an append-only **activity log** with full before/after snapshots.
   Deleting a node is a soft delete (`deleted_at`); deleting an edge retires it.
 - **Review queue** — all pending edges in one list (Sim-AI proposals are badged).
   Approve, reject, or open the edge, edit it, and then approve — the approval carries
-  your edits. Approving sets `status='approved'`, `decided_by`, `decided_at`.
+  your edits. Approving sets `status='approved'`, `decided_by`, `decided_at`. A
+  **Generate proposals** button (analyst/admin only) asks the simulated AI to propose
+  new relationships from existing nodes.
 - **Multiuser without auth** — pick any seeded user in the header; that user is the
   attributed actor on every action (sent via an `x-gk-actor` header, validated
   server-side). Viewers are read-only, enforced by the API.
@@ -145,6 +147,7 @@ return JSON. Mutations require the `x-gk-actor: <user-id>` header.
 | GET / PATCH / DELETE| `/api/edges/[id]`            | Read / update (endpoints only while pending) / retire |
 | POST                | `/api/edges/[id]/review`     | `{ "action": "approve" \| "reject" }`          |
 | POST                | `/api/edges/[id]/restore`    | Back to pending                                |
+| POST                | `/api/proposals/generate`    | `{ "count": n }` — Sim-AI proposes n pending edges (analyst/admin) |
 | GET                 | `/api/activity`              | Feed, newest first (`?entityType=&entityId=&limit=`) |
 
 Errors: `400` validation, `403` viewer write attempt, `404` missing entity,
