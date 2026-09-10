@@ -6,7 +6,7 @@ import { useWorkspace } from "@/components/workspace/WorkspaceProvider";
 
 /** No-auth actor picker: the selected user is attributed on every mutation. */
 export default function UserPicker() {
-  const { users, me, setMe } = useWorkspace();
+  const { users, me, setMe, loading } = useWorkspace();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -34,6 +34,11 @@ export default function UserPicker() {
             <span className="font-medium">{me.name}</span>
             <RoleChip role={me.role} />
           </>
+        ) : loading ? (
+          <span className="flex items-center gap-1.5 text-slate-400">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-slate-500" />
+            Loading…
+          </span>
         ) : (
           <span className="text-slate-400">Pick a user…</span>
         )}
