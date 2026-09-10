@@ -29,4 +29,5 @@ jobs:
         run: npm test -- --passWithNoTests
 
       - name: Build
+        if: hashFiles('src/**') != ''
         run: npm run build
