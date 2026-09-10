@@ -91,6 +91,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [refreshCount, setRefreshCount] = useState(0);
   const refreshing = useRef(false);
+  const refreshQueued = useRef(false);
 
   const me = useMemo(() => users.find((user) => user.id === meId) ?? null, [users, meId]);
   const canWrite = me !== null && me.role !== "viewer";
@@ -106,7 +107,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [notice]);
 
   const refresh = useCallback(async () => {
-    if (refreshing.current) return;
+    // Guard against overlapping fetches: if a refresh is already in flight,
+    // mark one as pending and re-run after it finishes. This prevents both
+    // concurrent fetches racing each other AND a mutation's refresh being
+    // silently dropped when a poll is mid-flight (which would leave stale
+    // state on screen).
+    if (refreshing.current) {
+      refreshQueued.current = true;
+      return;
+    }
     refreshing.current = true;
     try {
       const [snapshot, feed, userList] = await Promise.all([
@@ -125,8 +134,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Failed to load the graph.");
     } finally {
-      setLoading(false);
       refreshing.current = false;
+      setLoading(false);
+      // If a refresh was requested while this one was in flight, run it now so
+      // the newest state is never overwritten by an older response.
+      if (refreshQueued.current) {
+        refreshQueued.current = false;
+        void refresh();
+      }
     }
   }, []);
 
