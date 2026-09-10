@@ -21,6 +21,7 @@ export const activityActionEnum = pgEnum("activity_action", [
   "approve",
   "reject",
   "propose",
+  "retire",
   "restore",
 ]);
 export const activityEntityTypeEnum = pgEnum("activity_entity_type", ["node", "edge"]);

@@ -98,7 +98,7 @@ Contract tables (Drizzle schema in `src/lib/db/schema.ts`):
   `sim-ai`), `decided_by → users` nullable, `decided_at` nullable, `created_at`,
   `updated_at`
 - **activity_log** — `id`, `actor` (text: user id or `sim-ai`), `action`
-  (`create|update|delete|approve|reject|propose|restore`), `entity_type`
+  (`create|update|delete|approve|reject|propose|retire|restore`), `entity_type`
   (`node|edge`), `entity_id`, `before` jsonb, `after` jsonb, `created_at`
 
 Edge lifecycle: `pending → approved | rejected` (review), `pending|approved →

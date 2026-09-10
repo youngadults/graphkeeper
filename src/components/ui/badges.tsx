@@ -17,6 +17,7 @@ const ACTION_STYLES: Record<ActivityAction, string> = {
   approve: "bg-emerald-600 text-white",
   reject: "bg-rose-600 text-white",
   propose: "bg-violet-100 text-violet-800",
+  retire: "bg-slate-200 text-slate-700",
   restore: "bg-amber-100 text-amber-800",
 };
 

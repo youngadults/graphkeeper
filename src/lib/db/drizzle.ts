@@ -283,7 +283,7 @@ export function createDrizzleStore(url: string): GraphStore {
         .where(eq(edges.id, id))
         .returning();
       const updated = toEdge(row);
-      await insertActivity(actorId, "delete", "edge", id, { ...before }, { ...updated });
+      await insertActivity(actorId, "retire", "edge", id, { ...before }, { ...updated });
       return updated;
     },
 

@@ -108,8 +108,8 @@ describe("review state transitions", () => {
     const log = await s.listActivity({ entityType: "edge", entityId: approved.id });
     const [latest, previous] = log;
     expect(latest?.action).toBe("restore");
-    expect(previous?.action).toBe("delete");
-    expect(log.every((entry) => ["restore", "delete", "approve", "propose"].includes(entry.action))).toBe(true);
+    expect(previous?.action).toBe("retire");
+    expect(log.every((entry) => ["restore", "retire", "approve", "propose"].includes(entry.action))).toBe(true);
   });
 });
 

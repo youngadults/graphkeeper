@@ -254,7 +254,7 @@ export class MemoryStore implements GraphStore {
     if (!transition.ok) throw new GraphError("conflict", transition.reason);
     const updated: GraphEdge = { ...before, status: transition.status, updatedAt: this.now() };
     this.edges.set(id, updated);
-    this.appendActivity(actorId, "delete", "edge", id, { ...before }, { ...updated });
+    this.appendActivity(actorId, "retire", "edge", id, { ...before }, { ...updated });
     return { ...updated };
   }
 

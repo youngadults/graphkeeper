@@ -18,6 +18,7 @@ export const ACTIVITY_ACTIONS = [
   "approve",
   "reject",
   "propose",
+  "retire",
   "restore",
 ] as const;
 export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number];

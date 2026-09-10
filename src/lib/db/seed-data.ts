@@ -259,7 +259,7 @@ export function buildSeedGraph(now = Date.now()): SeedGraph {
 
   // Retired edge lineage: approved, then removed by the platform engineer.
   addAct(adminId, "approve", "edge", retiredEdge.id, { status: "pending" }, { status: "approved" }, at(15.5));
-  addAct(userId(6), "delete", "edge", retiredEdge.id, { status: "approved" }, { status: "retired" }, at(6));
+  addAct(userId(6), "retire", "edge", retiredEdge.id, { status: "approved" }, { status: "retired" }, at(6));
 
   // Pending proposals entered the queue via the simulated AI.
   pendingEdges.forEach((edge) => {
