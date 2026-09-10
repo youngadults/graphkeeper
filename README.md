@@ -44,6 +44,30 @@ recorded in an append-only **activity log** with full before/after snapshots.
 the seeded demo graph (both stores implement the same `GraphStore` interface — see
 `src/lib/db/store.ts`). Set `POSTGRES_URL` and the exact same API/UX runs on Postgres.
 
+## Security / trust model
+
+> ⚠️ **This MVP trusts the client-supplied identity for demo purposes only.**
+
+GraphKeeper has **no real authentication**. The acting user is chosen from a
+seeded picker in the header and sent to the API as the `x-gk-actor` header.
+The server validates that the actor id exists in the `users` table (an unknown
+actor is rejected with `422`) and enforces role-based authorization (viewers
+are read-only, `403` on write attempts), but it does **not** verify that the
+caller actually is that user.
+
+**Consequences:**
+
+- Any client can impersonate any seeded user by setting `x-gk-actor` to that
+  user's id — there is no session, cookie, token, or signature.
+- This is a deliberate, documented limitation of the MVP to keep the demo
+  zero-config and explorable. It is **not** a production security boundary.
+
+**Before any real deployment**, replace the trust-based actor with a real auth
+flow (session cookie / OAuth / signed token) and derive the actor server-side
+from the authenticated principal instead of a client header. The rest of the
+API (zod validation, role checks, state machine) is designed to layer on top
+of that unchanged.
+
 ## Run locally
 
 Requires Node 20+.
@@ -155,7 +179,8 @@ scripts/seed.ts        # loads the demo domain into Postgres
 
 ## Known gaps (follow-up pass)
 
-- No real auth/SSO — the user picker is trust-based by design for the MVP.
+- No real auth/SSO — the user picker is trust-based by design for the MVP (see
+  [Security / trust model](#security--trust-model)).
 - Node restore is API-only (no UI); no bulk review actions; no server-side pagination.
 - Collaboration is ~20s polling, not websockets; concurrent edits are last-write-wins.
 - Schema sync uses `drizzle-kit push`; versioned migrations are the next step.

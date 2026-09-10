@@ -8,7 +8,12 @@ import type {
 } from "@/lib/domain/types";
 
 /** Error codes map onto HTTP statuses in `lib/api/http.ts`. */
-export type GraphErrorCode = "validation" | "forbidden" | "not_found" | "conflict";
+export type GraphErrorCode =
+  | "validation"
+  | "forbidden"
+  | "not_found"
+  | "conflict"
+  | "unprocessable";
 
 export class GraphError extends Error {
   readonly code: GraphErrorCode;

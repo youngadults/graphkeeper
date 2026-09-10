@@ -9,6 +9,7 @@ const STATUS_BY_CODE: Record<GraphError["code"], number> = {
   forbidden: 403,
   not_found: 404,
   conflict: 409,
+  unprocessable: 422,
 };
 
 export function ok<T>(data: T, status = 200): NextResponse {
@@ -50,7 +51,7 @@ export async function requireActor(store: GraphStore, request: Request): Promise
     throw new GraphError("validation", "Missing x-gk-actor header — pick a user in the header first.");
   }
   const user = await store.getUser(actorId);
-  if (!user) throw new GraphError("validation", `Unknown actor "${actorId}".`);
+  if (!user) throw new GraphError("unprocessable", `Unknown actor "${actorId}".`);
   return user;
 }
 
