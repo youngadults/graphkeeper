@@ -8,13 +8,16 @@ import { useWorkspace } from "@/components/workspace/WorkspaceProvider";
 
 /** Pending review queue — approve, reject, or open an edge to edit-then-approve. */
 export default function ReviewQueue() {
-  const { graph, pendingCount, reviewEdge, select, actorInfo, canWrite } = useWorkspace();
+  const { graph, pendingCount, reviewEdge, restoreEdge, select, actorInfo, canWrite } = useWorkspace();
 
   if (!graph) return null;
 
   const pending = graph.edges
     .filter((edge) => edge.status === "pending")
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const retired = graph.edges
+    .filter((edge) => edge.status === "retired")
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
 
   return (
@@ -44,6 +47,27 @@ export default function ReviewQueue() {
             />
           ))}
         </ul>
+      )}
+      {retired.length > 0 && (
+        <div className="border-t border-slate-100 px-4 pt-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Retired ({retired.length}) — restore to re-enter review
+          </p>
+          <ul className="divide-y divide-slate-100 px-0 pb-4 pt-1">
+            {retired.map((edge) => (
+              <RetiredCard
+                key={edge.id}
+                edge={edge}
+                sourceLabel={nodeById.get(edge.sourceId)?.label ?? "?"}
+                targetLabel={nodeById.get(edge.targetId)?.label ?? "?"}
+                canWrite={canWrite}
+                actorInfo={actorInfo}
+                onOpen={() => select({ kind: "edge", id: edge.id })}
+                onRestore={() => restoreEdge(edge.id)}
+              />
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -111,6 +135,65 @@ function ReviewCard({ edge, sourceLabel, targetLabel, canWrite, actorInfo, onOpe
           className="rounded-md border border-rose-200 px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Reject
+        </button>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="ml-auto rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-slate-300"
+        >
+          Open
+        </button>
+      </div>
+    </li>
+  );
+}
+
+interface RetiredCardProps {
+  edge: GraphEdge;
+  sourceLabel: string;
+  targetLabel: string;
+  canWrite: boolean;
+  actorInfo: ReturnType<typeof useWorkspace>["actorInfo"];
+  onOpen: () => void;
+  onRestore: () => Promise<GraphEdge>;
+}
+
+function RetiredCard({ edge, sourceLabel, targetLabel, canWrite, actorInfo, onOpen, onRestore }: RetiredCardProps) {
+  const [busy, setBusy] = useState(false);
+  const proposer = actorInfo(edge.proposedBy);
+
+  const restore = async () => {
+    setBusy(true);
+    try {
+      await onRestore();
+    } catch {
+      // error toast already shown by the provider
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <li className="rounded-lg border border-slate-200 p-2.5 my-2">
+      <div className="flex items-center gap-2">
+        <ActorChip actor={proposer} />
+        <span className="ml-auto">
+          <StatusBadge status={edge.status} />
+        </span>
+      </div>
+      <button type="button" onClick={onOpen} className="mt-1.5 block w-full text-left">
+        <p className="text-sm font-medium text-slate-800">
+          {sourceLabel} <span className="text-xs font-normal text-slate-400">—{edge.type}→</span> {targetLabel}
+        </p>
+      </button>
+      <div className="mt-2 flex gap-1.5">
+        <button
+          type="button"
+          disabled={!canWrite || busy}
+          onClick={restore}
+          className="rounded-md border border-amber-300 px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Restore to pending
         </button>
         <button
           type="button"

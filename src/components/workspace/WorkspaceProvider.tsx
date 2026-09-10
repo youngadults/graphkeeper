@@ -68,6 +68,7 @@ interface WorkspaceContextValue {
   createNode: (input: CreateNodeInput) => Promise<GraphNode>;
   updateNode: (id: string, patch: UpdateNodeInput) => Promise<GraphNode>;
   deleteNode: (id: string) => Promise<GraphNode>;
+  restoreNode: (id: string) => Promise<GraphNode>;
   createEdge: (input: CreateEdgeInput) => Promise<GraphEdge>;
   updateEdge: (id: string, patch: UpdateEdgeInput) => Promise<GraphEdge>;
   deleteEdge: (id: string) => Promise<GraphEdge>;
@@ -173,6 +174,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       updateNode: (id: string, patch: UpdateNodeInput) =>
         run((actorId) => api.updateNode(id, patch, actorId), "Saved."),
       deleteNode: (id: string) => run((actorId) => api.deleteNode(id, actorId), "Node deleted."),
+      restoreNode: (id: string) => run((actorId) => api.restoreNode(id, actorId), "Node restored."),
       createEdge: (input: CreateEdgeInput) =>
         run((actorId) => api.createEdge(input, actorId), "Relationship proposed — it is pending review."),
       updateEdge: (id: string, patch: UpdateEdgeInput) =>

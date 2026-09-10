@@ -9,7 +9,7 @@ import { ActivityList, useActivityFeed } from "@/components/panel/ActivityFeed";
 import { useWorkspace } from "@/components/workspace/WorkspaceProvider";
 
 export default function NodeDetails({ node }: { node: GraphNode }) {
-  const { canWrite, updateNode, deleteNode, actorInfo, refreshCount, select, notify } = useWorkspace();
+  const { canWrite, updateNode, deleteNode, restoreNode, actorInfo, refreshCount, select, notify } = useWorkspace();
   const [label, setLabel] = useState(node.label);
   const [type, setType] = useState(node.type);
   const [propsText, setPropsText] = useState(serializeProps(node.props));
@@ -57,6 +57,15 @@ export default function NodeDetails({ node }: { node: GraphNode }) {
       await deleteNode(node.id);
       select(null);
       notify("Node deleted (soft).");
+    } catch {
+      // error toast already shown by the provider
+    }
+  };
+
+  const handleRestore = async () => {
+    try {
+      await restoreNode(node.id);
+      notify("Node restored.");
     } catch {
       // error toast already shown by the provider
     }
@@ -111,13 +120,23 @@ export default function NodeDetails({ node }: { node: GraphNode }) {
           </div>
           <PropsField text={propsText} onChange={setPropsText} error={propsError} />
           <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50"
-            >
-              Delete node
-            </button>
+            {node.deletedAt ? (
+              <button
+                type="button"
+                onClick={handleRestore}
+                className="rounded-lg border border-amber-300 px-2.5 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50"
+              >
+                Restore node
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50"
+              >
+                Delete node
+              </button>
+            )}
             <button
               type="button"
               onClick={handleSave}
