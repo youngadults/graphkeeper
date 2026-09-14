@@ -114,14 +114,44 @@ All future schema changes go through migrations. Database changes that ship
 with backfills (e.g. provenance tags on pre-existing edges) are encoded in the
 migration SQL itself, so `db:migrate` is the only step needed.
 
-**Migrating a database that was previously managed with `db:push`:** the
-migration journal does not exist yet, so migrations would replay over tables
-that already exist. The demo database holds only seed data, so the simple path
-is to drop the GraphKeeper tables once (`nodes`, `edges`, `users`,
-`activity_log`) and then run `npm run db:migrate && npm run db:seed`. For a
-production database, mark the baseline migration (`0000_baseline_schema.sql`)
-as applied in the journal table instead of replaying it — see the Drizzle docs
-on adopting migrations for an existing schema.
+**Adopting migrations on a database that was previously managed with `db:push`**
+requires marking the baseline migration (`0000_baseline_schema.sql`) as applied
+so `db:migrate` starts *after* it. Pick exactly one path — **never drop tables
+in a database whose data you want to keep**:
+
+- **Dev / demo database (disposable data):** recreate it. Drop the database, or
+  just the GraphKeeper tables (`users`, `nodes`, `edges`, `imports`,
+  `activity_log`), then `npm run db:migrate && npm run db:seed`. Dropping
+  tables destroys everything in them — only acceptable when nothing in the
+  database needs to be kept.
+- **Production / any database with data to keep (non-destructive):** baseline
+  in place, then migrate forward:
+
+  1. Back up the database (`pg_dump`).
+  2. Create the journal and mark the baseline as already applied, using the
+     baseline entry's `tag` and `when` values from `drizzle/meta/_journal.json`:
+
+     ```sql
+     CREATE SCHEMA IF NOT EXISTS drizzle;
+     CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (
+       id SERIAL PRIMARY KEY,
+       hash text NOT NULL,
+       created_at numeric NOT NULL
+     );
+     INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+     VALUES ('0000_baseline_schema', 1789381025960);
+     ```
+
+  3. `npm run db:migrate` — the baseline is skipped; only later migrations run
+     (e.g. `0001_import_provenance.sql`, whose backfills are in-place `UPDATE`s
+     that tag existing rows without replacing anything).
+  4. Verify: row counts and spot checks (e.g. `SELECT origin, count(*) FROM
+     edges GROUP BY origin;`) before and after.
+
+  The accidental-replay safety net is that the baseline uses plain `CREATE
+  TABLE`, which errors on existing tables instead of overwriting data. If a
+  migration step misbehaves, restore the backup and re-run the baselining
+  steps.
 
 ## Tests
 
