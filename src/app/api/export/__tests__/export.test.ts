@@ -44,6 +44,8 @@ describe("GET /api/export/graph", () => {
     proposedBy: SIM_AI,
     decidedBy: null,
     decidedAt: null,
+    origin: "sim-ai",
+    originRef: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });

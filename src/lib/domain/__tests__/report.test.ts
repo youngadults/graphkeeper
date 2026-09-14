@@ -17,6 +17,8 @@ function edge(overrides: Partial<GraphEdge> & { id: string; createdAt: string; p
     status: "approved",
     decidedBy: null,
     decidedAt: null,
+    origin: "manual",
+    originRef: null,
     updatedAt: overrides.createdAt,
     ...overrides,
   };
