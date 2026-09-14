@@ -229,6 +229,19 @@ describe("POST /api/import/commit", () => {
     expect(res.status).toBe(422);
   });
 
+  it("422s a CSV with duplicate headers", async () => {
+    const res = await COMMIT(
+      commitRequest(ANALYST, {
+        importId: "route-duphdr-01",
+        source: { nodesCsv: "label,type,label\nAda,person,Dup\n" },
+        mapping: { nodes: { label: "label", type: "type" } },
+      }),
+    );
+    expect(res.status).toBe(422);
+    const data = (await res.json()) as { error: string };
+    expect(data.error).toContain("Duplicate CSV header(s): label");
+  });
+
   it("422s when a CSV commit lacks a confirmed mapping", async () => {
     const res = await COMMIT(
       commitRequest(ANALYST, { importId: "route-nomap-001", source: { nodesCsv: NODES_CSV } }),

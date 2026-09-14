@@ -219,6 +219,9 @@ attributed to the importing user.
   are stored with a leading apostrophe (e.g. `'=SUM(A1)`) so they can never
   execute as spreadsheet formulas in a later export; the preview reports how
   many cells were neutralized and reviewers correct values in the review queue.
+- **Duplicate columns rejected** — a CSV whose header row repeats a column
+  name is flagged in the preview and rejected with `422` on commit; rename
+  columns so each field maps uniquely.
 - **UI** — header **⤓ Import** → pick files or paste → confirm the column mapping
   → preview counts + warnings → commit, then jump to the review queue. Edges in
   the details panel and review queue carry an origin badge.

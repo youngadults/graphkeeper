@@ -172,6 +172,16 @@ describe("parseSourceData", () => {
     expect(data.nodeRows[2]?.label).toBe("plain");
     expect(data.neutralizedCells).toBe(2);
   });
+
+  it("flags duplicate headers for commit rejection", () => {
+    const data = parseSourceData(
+      "csv",
+      { nodesCsv: "label,type,label\nAda,person,Dup\n" },
+      undefined,
+      { nodes: { label: "label", type: "type" } },
+    );
+    expect(data.mappingProblems.some((problem) => problem.includes('Duplicate CSV header(s): label'))).toBe(true);
+  });
 });
 
 describe("analyzeImport", () => {

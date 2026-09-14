@@ -293,6 +293,17 @@ function parseGraphJsonEdges(source: GraphJsonSource): ParsedEdgeRow[] {
     }));
 }
 
+/** Headers that appear more than once make column mapping ambiguous. */
+function duplicateHeaders(headers: string[]): string[] {
+  const seen = new Set<string>();
+  const dupes = new Set<string>();
+  for (const header of headers) {
+    if (seen.has(header)) dupes.add(header);
+    seen.add(header);
+  }
+  return [...dupes];
+}
+
 /**
  * Parse a validated import source into canonical rows. `confirmed` is the
  * client-confirmed mapping for CSV sources; for previews pass undefined to
@@ -324,6 +335,10 @@ export function parseSourceData(
       const table = neutralized.table;
       neutralizedCells += neutralized.count;
       nodeHeaders = table.headers;
+      const nodeDupes = duplicateHeaders(table.headers);
+      if (nodeDupes.length > 0) {
+        issues.push(`Duplicate CSV header(s): ${nodeDupes.join(", ")} — each column must have a unique name.`);
+      }
       nodeMapping = confirmed?.nodes ?? suggestNodeMapping(table.headers);
       const problems = validateNodeMapping(table, nodeMapping);
       issues.push(...problems);
@@ -338,6 +353,10 @@ export function parseSourceData(
       const table = neutralized.table;
       neutralizedCells += neutralized.count;
       edgeHeaders = table.headers;
+      const edgeDupes = duplicateHeaders(table.headers);
+      if (edgeDupes.length > 0) {
+        issues.push(`Duplicate CSV header(s): ${edgeDupes.join(", ")} — each column must have a unique name.`);
+      }
       edgeMapping = confirmed?.edges ?? suggestEdgeMapping(table.headers);
       const problems = validateEdgeMapping(table, edgeMapping);
       issues.push(...problems);
