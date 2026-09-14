@@ -1,6 +1,6 @@
 "use client";
 
-import type { ActivityAction, EdgeStatus } from "@/lib/domain/types";
+import type { ActivityAction, EdgeOrigin, EdgeStatus } from "@/lib/domain/types";
 import type { ActorInfo } from "@/components/workspace/WorkspaceProvider";
 
 const STATUS_STYLES: Record<EdgeStatus, string> = {
@@ -22,6 +22,13 @@ const ACTION_STYLES: Record<ActivityAction, string> = {
   import: "bg-cyan-100 text-cyan-800",
 };
 
+const ORIGIN_STYLES: Record<EdgeOrigin, string> = {
+  manual: "bg-slate-100 text-slate-600 border-slate-200",
+  csv: "bg-sky-100 text-sky-700 border-sky-200",
+  "graph-json": "bg-indigo-100 text-indigo-700 border-indigo-200",
+  "sim-ai": "bg-violet-100 text-violet-700 border-violet-200",
+};
+
 const ROLE_STYLES: Record<string, string> = {
   admin: "bg-violet-100 text-violet-700 border-violet-200",
   analyst: "bg-sky-100 text-sky-700 border-sky-200",
@@ -32,6 +39,19 @@ export function StatusBadge({ status }: { status: EdgeStatus }) {
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize ${STATUS_STYLES[status]}`}>
       {status}
+    </span>
+  );
+}
+
+/** Provenance badge — where an edge came from; tooltip carries the source file. */
+export function OriginBadge({ origin, originRef }: { origin: EdgeOrigin; originRef?: string | null }) {
+  const label = origin === "sim-ai" ? "sim-ai" : origin;
+  return (
+    <span
+      title={originRef ? `Imported from ${originRef}` : undefined}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${ORIGIN_STYLES[origin]}`}
+    >
+      {label}
     </span>
   );
 }

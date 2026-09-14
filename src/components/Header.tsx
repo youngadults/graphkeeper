@@ -4,7 +4,7 @@ import UserPicker from "@/components/UserPicker";
 import { useWorkspace } from "@/components/workspace/WorkspaceProvider";
 
 export default function Header() {
-  const { graph, pendingCount, me, canWrite, openCreate } = useWorkspace();
+  const { graph, pendingCount, me, canWrite, openCreate, setTab } = useWorkspace();
 
   const nodeCount = graph?.nodes.length ?? 0;
   const edgeCount = graph?.edges.length ?? 0;
@@ -32,6 +32,15 @@ export default function Header() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!canWrite}
+          title={canWrite ? "Import nodes and relationships" : "Viewers are read-only"}
+          onClick={() => setTab("import")}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          ⤓ Import
+        </button>
         <button
           type="button"
           disabled={!canWrite}

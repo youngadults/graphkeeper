@@ -7,6 +7,8 @@ import type {
   User,
 } from "@/lib/domain/types";
 import type { CreateEdgeInput, CreateNodeInput, UpdateEdgeInput, UpdateNodeInput } from "@/lib/db/store";
+import type { ImportCommitResult, ImportPreview } from "@/lib/domain/import-plan";
+import type { EdgeFieldMapping, NodeFieldMapping } from "@/lib/domain/import-source";
 
 /**
  * Thin typed fetch wrapper for the browser. Mutating calls attach the acting
@@ -100,4 +102,28 @@ export const api = {
       body: { count },
       actorId,
     }),
+
+  previewImport: (body: {
+    source: ImportSourceBody;
+    mapping?: { nodes?: NodeFieldMapping; edges?: EdgeFieldMapping };
+  }): Promise<ImportPreview> =>
+    request<ImportPreview>("/api/import/preview", { method: "POST", body }),
+
+  commitImport: (
+    body: {
+      importId: string;
+      source: ImportSourceBody;
+      mapping?: { nodes?: NodeFieldMapping; edges?: EdgeFieldMapping };
+      filename?: string;
+    },
+    actorId: string,
+  ): Promise<ImportCommitResult> =>
+    request<ImportCommitResult>("/api/import/commit", { method: "POST", body, actorId }),
 };
+
+/** Import source payloads; graphJson contents are validated server-side. */
+export interface ImportSourceBody {
+  nodesCsv?: string;
+  edgesCsv?: string;
+  graphJson?: { nodes?: unknown[]; edges?: unknown[] };
+}
