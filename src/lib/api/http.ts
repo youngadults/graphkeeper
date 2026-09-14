@@ -10,6 +10,7 @@ const STATUS_BY_CODE: Record<GraphError["code"], number> = {
   not_found: 404,
   conflict: 409,
   unprocessable: 422,
+  too_large: 413,
 };
 
 export function ok<T>(data: T, status = 200): NextResponse {

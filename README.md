@@ -35,6 +35,19 @@ recorded in an append-only **activity log** with full before/after snapshots.
   ~28 approved relationships, 18 pending simulated-AI proposals (with confidence +
   rationale), one rejected, one retired, and ~85 activity entries.
 
+## Features
+
+| Feature             | Free                      | Pro (planned)          |
+| ------------------- | ------------------------- | ---------------------- |
+| Graph canvas        | ✅                        | ✅                     |
+| Manual node/edge CRUD| ✅                       | ✅                     |
+| Import              | planned                   | ✅                     |
+| Review queue        | ✅                        | ✅                     |
+| History / audit log | ✅                        | ✅                     |
+| Bulk review         | —                         | ✅                     |
+| Exports at scale    | ≤ 50k edges               | Unlimited              |
+| Team seats          | single demo user          | Multi-seat roles       |
+
 ## Stack
 
 | Layer     | Choice                                                        |
@@ -252,9 +265,86 @@ return JSON. Mutations require the `x-gk-actor: <user-id>` header.
 | POST                | `/api/import/preview`        | `{ nodesCsv?, edgesCsv? } or { graphJson }` — parse, map, warn (no writes) |
 | POST                | `/api/import/commit`         | `{ importId, source, mapping?, filename? }` — create origin-tagged rows (analyst/admin) |
 | GET                 | `/api/activity`              | Feed, newest first (`?entityType=&entityId=&limit=`) |
+| GET                 | `/api/export/graph`          | Full graph export (`?include=activity` embeds the activity log) |
+| GET                 | `/api/export/report`         | Validation/audit compliance report |
 
 Errors: `400` validation, `403` viewer write attempt, `404` missing entity,
-`409` illegal state transition, `422` zod validation failure (with issue details).
+`409` illegal state transition, `422` zod validation failure (with issue details),
+`413` export payload exceeds the edge cap.
+
+### Export API
+
+Both export routes are **read-only** and require no `x-gk-actor` header — every
+role (viewer/analyst/admin) may call them.
+
+#### `GET /api/export/graph`
+
+Full graph JSON for backups, downstream pipelines, or analysis.
+
+| Query param | Values                | Effect                                              |
+| ----------- | --------------------- | --------------------------------------------------- |
+| `include`   | `activity` (optional)  | Embed the complete activity log as an `activity` array |
+
+Response shape:
+
+```jsonc
+{
+  "nodes": [
+    {
+      "id": "…", "label": "…", "type": "…",
+      "props": {}, "createdBy": "…", "createdAt": "…",
+      "updatedAt": "…", "deletedAt": null
+    }
+  ],
+  "edges": [
+    {
+      "id": "…", "sourceId": "…", "targetId": "…", "type": "…",
+      "props": {}, "status": "approved", "proposedBy": "sim-ai",
+      "decidedBy": "…", "decidedAt": "…", "createdAt": "…", "updatedAt": "…"
+    }
+  ],
+  "activity": [] // only when ?include=activity
+}
+```
+
+Nodes include their `created_by`/`created_at`/`updated_at` creation metadata; edges
+carry `status`, `proposed_by` (user id or the `sim-ai` sentinel), `decided_by`,
+`decided_at`, and both timestamps. **Scale cap:** exports are refused with `413 (Too
+Large)` when the edge count exceeds **50,000**. Invalid query params return `422`.
+
+#### `GET /api/export/report`
+
+Validation / audit report — the compliance-evidence artifact. Aggregates the whole
+graph into a glanceable summary:
+
+```jsonc
+{
+  "generatedAt": "2026-03-10T12:00:00.000Z",
+  "nodeCount": 26,
+  "edgeCount": 50,
+  "countsByStatus": { "pending": 20, "approved": 28, "rejected": 1, "retired": 1 },
+  "provenance": { "simAi": 48, "human": 2 },
+  "pendingBacklog": { "count": 20, "oldestPendingAgeDays": 6, "oldestPendingAt": "…" },
+  "timeline": [
+    { "date": "2026-02-08", "approvals": 3, "rejections": 0 },
+    // … last 30 calendar days, oldest → newest
+  ]
+}
+```
+
+- `countsByStatus` — edges grouped by lifecycle status.
+- `provenance` — edge origin split derived from `proposed_by` (`sim-ai` vs human).
+- `pendingBacklog` — pending count plus age (in days) of the oldest pending edge.
+- `timeline` — approvals and rejections per day over the last 30 calendar days,
+  sourced from the activity log (authoritative decision lineage).
+
+### Graph Health panel
+
+The **Health** tab (right side panel) renders `/api/export/report` client-side as a
+clean, glanceable dashboard: node/edge scale, per-status relationship counts,
+Sim AI vs human provenance split, pending backlog (count + oldest age), and a
+7-day review-activity sparkline of approvals/rejections. It refreshes whenever the
+workspace reloads and needs no credentials to view.
 
 ## Deploy to Vercel
 

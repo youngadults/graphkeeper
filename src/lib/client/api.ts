@@ -6,6 +6,7 @@ import type {
   GraphSnapshot,
   User,
 } from "@/lib/domain/types";
+import type { GraphReport } from "@/lib/domain/report";
 import type { CreateEdgeInput, CreateNodeInput, UpdateEdgeInput, UpdateNodeInput } from "@/lib/db/store";
 import type { ImportCommitResult, ImportPreview } from "@/lib/domain/import-plan";
 import type { EdgeFieldMapping, NodeFieldMapping } from "@/lib/domain/import-source";
@@ -61,6 +62,19 @@ function activityPath(query: ActivityQuery): string {
   return `/api/activity${qs ? `?${qs}` : ""}`;
 }
 
+export interface GraphExportQuery {
+  include?: "activity";
+}
+
+export type GraphExport = GraphSnapshot & { activity?: ActivityEntry[] };
+
+function exportGraphPath(query: GraphExportQuery = {}): string {
+  const params = new URLSearchParams();
+  if (query.include) params.set("include", query.include);
+  const qs = params.toString();
+  return `/api/export/graph${qs ? `?${qs}` : ""}`;
+}
+
 export const api = {
   graph: (): Promise<GraphSnapshot> => request<GraphSnapshot>("/api/graph"),
 
@@ -68,6 +82,11 @@ export const api = {
 
   activity: (query: ActivityQuery = {}): Promise<ActivityEntry[]> =>
     request<ActivityEntry[]>(activityPath(query)),
+
+  exportGraph: (query: GraphExportQuery = {}): Promise<GraphExport> =>
+    request<GraphExport>(exportGraphPath(query)),
+
+  report: (): Promise<GraphReport> => request<GraphReport>("/api/export/report"),
 
   createNode: (input: CreateNodeInput, actorId: string): Promise<GraphNode> =>
     request<GraphNode>("/api/nodes", { method: "POST", body: input, actorId }),
