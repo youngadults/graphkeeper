@@ -24,6 +24,3 @@ next-env.d.ts
 
 # vercel
 .vercel
-
-# drizzle migrations output (schema is synced via db:push for the MVP)
-/drizzle

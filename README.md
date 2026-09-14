@@ -86,13 +86,38 @@ In demo mode data resets when the dev server restarts. No env vars, no database.
 1. Create a database at [neon.tech](https://neon.tech) and copy the **pooled**
    connection string.
 2. `cp .env.example .env.local` and set `POSTGRES_URL`.
-3. Push the schema and load the demo domain:
+3. Run the versioned migrations and load the demo domain:
 
 ```bash
-npm run db:push    # drizzle-kit push — creates tables/enums
-npm run db:seed    # clears + reseeds the demo graph
+npm run db:migrate  # drizzle-kit migrate — applies the SQL migrations in ./drizzle
+npm run db:seed     # clears + reseeds the demo graph
 npm run dev
 ```
+
+### Schema migrations
+
+Schema changes are versioned SQL migrations in `drizzle/` (Drizzle Kit), not a
+push-to-database workflow:
+
+1. Edit `src/lib/db/schema.ts`.
+2. `npm run db:generate` — generates a timestamped SQL migration in `drizzle/`
+   (diffed against the previous snapshot in `drizzle/meta/`).
+3. Review the generated SQL, commit it with your schema change.
+4. `npm run db:migrate` — applies all pending migrations in order, recording
+   progress in the `drizzle.__drizzle_migrations` journal table.
+
+All future schema changes go through migrations. Database changes that ship
+with backfills (e.g. provenance tags on pre-existing edges) are encoded in the
+migration SQL itself, so `db:migrate` is the only step needed.
+
+**Migrating a database that was previously managed with `db:push`:** the
+migration journal does not exist yet, so migrations would replay over tables
+that already exist. The demo database holds only seed data, so the simple path
+is to drop the GraphKeeper tables once (`nodes`, `edges`, `users`,
+`activity_log`) and then run `npm run db:migrate && npm run db:seed`. For a
+production database, mark the baseline migration (`0000_baseline_schema.sql`)
+as applied in the journal table instead of replaying it — see the Drizzle docs
+on adopting migrations for an existing schema.
 
 ## Tests
 
@@ -159,8 +184,8 @@ Errors: `400` validation, `403` viewer write attempt, `404` missing entity,
    `vercel.json` pins the `nextjs` framework preset.
 2. Add `POSTGRES_URL` in Project → Settings → Environment Variables (a Neon
    instance via the Vercel Marketplace integration works directly).
-3. Run the schema push + seed once against that database
-   (`npm run db:push && npm run db:seed` locally with the same `POSTGRES_URL`).
+3. Run the migrations + seed once against that database
+   (`npm run db:migrate && npm run db:seed` locally with the same `POSTGRES_URL`).
 4. Deploy. CI (`.github/workflows/ci.yml`) runs lint + typecheck + tests + build on
    every PR, so only green branches merge.
 
@@ -186,7 +211,7 @@ scripts/seed.ts        # loads the demo domain into Postgres
   [Security / trust model](#security--trust-model)).
 - Node restore is API-only (no UI); no bulk review actions; no server-side pagination.
 - Collaboration is ~20s polling, not websockets; concurrent edits are last-write-wins.
-- Schema sync uses `drizzle-kit push`; versioned migrations are the next step.
+- Versioned migrations are in place; there is no automated down-migration/rollback path.
 - In-memory demo mode resets on restart and is per-server-process (single-node only).
 - Only unit/integration tests on domain + store logic; no Playwright E2E yet.
 
