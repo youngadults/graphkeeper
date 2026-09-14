@@ -33,6 +33,12 @@ describe("parseCsv", () => {
     expect(table.headers).toEqual(["label", "type"]);
     expect(table.rows).toEqual([]);
   });
+
+  it("parses a quoted field spanning multiple lines", () => {
+    const table = parseCsv('label,description\n"Test","Line1\nLine2"');
+    expect(table.headers).toEqual(["label", "description"]);
+    expect(table.rows).toEqual([["Test", "Line1\nLine2"]]);
+  });
 });
 
 describe("neutralizeFormulas", () => {
