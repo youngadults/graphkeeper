@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EDGE_STATUSES, ENTITY_TYPES } from "./types";
+import { EDGE_ORIGINS, EDGE_STATUSES, ENTITY_TYPES } from "./types";
 
 /**
  * Server-side validation schemas (zod v4). Route handlers parse every body
@@ -7,6 +7,9 @@ import { EDGE_STATUSES, ENTITY_TYPES } from "./types";
  */
 
 export const propsSchema = z.record(z.string(), z.unknown());
+
+/** Provenance values used for import payloads and filters. */
+export const edgeOriginSchema = z.enum(EDGE_ORIGINS);
 
 export const createNodeSchema = z.object({
   label: z.string().trim().min(1, "Label is required").max(120),

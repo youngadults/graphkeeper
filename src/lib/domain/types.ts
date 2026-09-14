@@ -11,6 +11,10 @@ export type UserRole = (typeof USER_ROLES)[number];
 export const EDGE_STATUSES = ["pending", "approved", "rejected", "retired"] as const;
 export type EdgeStatus = (typeof EDGE_STATUSES)[number];
 
+/** Provenance: how an entity entered the graph. */
+export const EDGE_ORIGINS = ["manual", "csv", "graph-json", "sim-ai"] as const;
+export type EdgeOrigin = (typeof EDGE_ORIGINS)[number];
+
 export const ACTIVITY_ACTIONS = [
   "create",
   "update",
@@ -20,6 +24,7 @@ export const ACTIVITY_ACTIONS = [
   "propose",
   "retire",
   "restore",
+  "import",
 ] as const;
 export type ActivityAction = (typeof ACTIVITY_ACTIONS)[number];
 
@@ -46,6 +51,10 @@ export interface GraphNode {
   updatedAt: string;
   /** Soft-delete flag: set when the node is deleted, null while alive. */
   deletedAt: string | null;
+  /** Provenance: how this node entered the graph. */
+  origin: EdgeOrigin;
+  /** Import source reference (e.g. uploaded filename), null for manual rows. */
+  originRef: string | null;
 }
 
 export interface GraphEdge {
@@ -61,6 +70,10 @@ export interface GraphEdge {
   decidedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Provenance: how this relationship entered the graph. */
+  origin: EdgeOrigin;
+  /** Import source reference (e.g. CSV filename), null for manual rows. */
+  originRef: string | null;
 }
 
 export interface ActivityEntry {

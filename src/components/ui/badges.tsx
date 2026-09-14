@@ -19,6 +19,7 @@ const ACTION_STYLES: Record<ActivityAction, string> = {
   propose: "bg-violet-100 text-violet-800",
   retire: "bg-slate-200 text-slate-700",
   restore: "bg-amber-100 text-amber-800",
+  import: "bg-cyan-100 text-cyan-800",
 };
 
 const ROLE_STYLES: Record<string, string> = {

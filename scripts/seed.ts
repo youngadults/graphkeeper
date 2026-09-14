@@ -45,6 +45,8 @@ async function main(): Promise<void> {
       createdAt: new Date(node.createdAt),
       updatedAt: new Date(node.updatedAt),
       deletedAt: node.deletedAt ? new Date(node.deletedAt) : null,
+      origin: node.origin,
+      originRef: node.originRef,
     })),
   );
 
@@ -61,6 +63,8 @@ async function main(): Promise<void> {
       decidedAt: edge.decidedAt ? new Date(edge.decidedAt) : null,
       createdAt: new Date(edge.createdAt),
       updatedAt: new Date(edge.updatedAt),
+      origin: edge.origin,
+      originRef: edge.originRef,
     })),
   );
 

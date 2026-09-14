@@ -4,68 +4,19 @@ import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 import { transitionEdge } from "@/lib/domain/transitions";
 import { SIM_AI } from "@/lib/domain/types";
-import type {
-  ActivityEntry,
-  ActivityEntityType,
-  GraphEdge,
-  GraphNode,
-  User,
-} from "@/lib/domain/types";
+import type { ActivityEntry, ActivityEntityType } from "@/lib/domain/types";
 import type { GraphStore } from "./store";
 import { GraphError } from "./store";
 import { activityLog, edges, nodes, users } from "./schema";
-import type { ActivityRow, EdgeRow, NodeRow, UserRow } from "./schema";
+import type { EdgeRow, NodeRow, UserRow } from "./schema";
+import { toActivity, toEdge, toNode, toUser } from "./drizzle-rows";
+import { createImportMethods } from "./drizzle-imports";
 
 /**
  * Postgres GraphStore backed by Drizzle ORM + the Neon serverless driver.
  * Every mutation also appends a full before/after snapshot to activity_log.
+ * Row mappers live in ./drizzle-rows; import support in ./drizzle-imports.
  */
-
-function toUser(row: UserRow): User {
-  return { id: row.id, name: row.name, role: row.role, color: row.color };
-}
-
-function toNode(row: NodeRow): GraphNode {
-  return {
-    id: row.id,
-    label: row.label,
-    type: row.type,
-    props: row.props ?? {},
-    createdBy: row.createdBy,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    deletedAt: row.deletedAt ? row.deletedAt.toISOString() : null,
-  };
-}
-
-function toEdge(row: EdgeRow): GraphEdge {
-  return {
-    id: row.id,
-    sourceId: row.sourceId,
-    targetId: row.targetId,
-    type: row.type,
-    props: row.props ?? {},
-    status: row.status,
-    proposedBy: row.proposedBy,
-    decidedBy: row.decidedBy,
-    decidedAt: row.decidedAt ? row.decidedAt.toISOString() : null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
-}
-
-function toActivity(row: ActivityRow): ActivityEntry {
-  return {
-    id: row.id,
-    actor: row.actor,
-    action: row.action,
-    entityType: row.entityType,
-    entityId: row.entityId,
-    before: row.before ?? null,
-    after: row.after ?? null,
-    createdAt: row.createdAt.toISOString(),
-  };
-}
 
 export function createDrizzleStore(url: string): GraphStore {
   const db = drizzle(neon(url));
@@ -138,6 +89,8 @@ export function createDrizzleStore(url: string): GraphStore {
           type: input.type,
           props: input.props ?? {},
           createdBy: actorId,
+          origin: "manual",
+          originRef: null,
         })
         .returning();
       const node = toNode(row);
@@ -219,6 +172,8 @@ export function createDrizzleStore(url: string): GraphStore {
           props: input.props ?? {},
           status: "pending",
           proposedBy,
+          origin: proposedBy === SIM_AI ? "sim-ai" : "manual",
+          originRef: null,
         })
         .returning();
       const edge = toEdge(row);
@@ -314,5 +269,7 @@ export function createDrizzleStore(url: string): GraphStore {
         .limit(filter?.limit ?? 100);
       return rows.map(toActivity);
     },
+
+    ...createImportMethods(db, requireUserRow),
   };
 }

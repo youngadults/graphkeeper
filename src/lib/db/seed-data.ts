@@ -1,5 +1,5 @@
 import { SIM_AI } from "@/lib/domain/types";
-import type { ActivityAction, ActivityEntityType, EdgeStatus, UserRole } from "@/lib/domain/types";
+import type { ActivityAction, ActivityEntityType, EdgeOrigin, EdgeStatus, UserRole } from "@/lib/domain/types";
 import {
   SEED_APPROVED_EDGES,
   SEED_PEOPLE,
@@ -30,6 +30,8 @@ export interface SeedNode {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  origin: EdgeOrigin;
+  originRef: string | null;
 }
 
 export interface SeedEdge {
@@ -44,6 +46,8 @@ export interface SeedEdge {
   decidedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  origin: EdgeOrigin;
+  originRef: string | null;
 }
 
 export interface SeedActivity {
@@ -99,6 +103,8 @@ export function buildSeedGraph(now = Date.now()): SeedGraph {
       createdAt: at(30, (SEED_PEOPLE.length - i) * 7),
       updatedAt: at(30, (SEED_PEOPLE.length - i) * 7),
       deletedAt: null,
+      origin: "manual",
+      originRef: null,
     });
   });
   SEED_PROJECTS.forEach((project, i) => {
@@ -111,6 +117,8 @@ export function buildSeedGraph(now = Date.now()): SeedGraph {
       createdAt: at(29, (SEED_PROJECTS.length - i) * 9),
       updatedAt: at(29, (SEED_PROJECTS.length - i) * 9),
       deletedAt: null,
+      origin: "manual",
+      originRef: null,
     });
   });
   SEED_SYSTEMS.forEach((system, i) => {
@@ -123,6 +131,8 @@ export function buildSeedGraph(now = Date.now()): SeedGraph {
       createdAt: at(28, (SEED_SYSTEMS.length - i) * 11),
       updatedAt: at(28, (SEED_SYSTEMS.length - i) * 11),
       deletedAt: null,
+      origin: "manual",
+      originRef: null,
     });
   });
 
@@ -160,6 +170,8 @@ export function buildSeedGraph(now = Date.now()): SeedGraph {
       decidedAt,
       createdAt,
       updatedAt: decidedAt ?? createdAt,
+      origin: "sim-ai",
+      originRef: null,
     };
     edges.push(edge);
     return edge;

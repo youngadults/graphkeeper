@@ -13,6 +13,10 @@ import type {
   CreateEdgeInput,
   CreateNodeInput,
   GraphStore,
+  ImportContext,
+  ImportEdgeInput,
+  ImportNodeInput,
+  ImportRecord,
   UpdateEdgeInput,
   UpdateNodeInput,
 } from "./store";
@@ -29,6 +33,7 @@ export class MemoryStore implements GraphStore {
   private users: Map<string, User>;
   private nodes: Map<string, GraphNode>;
   private edges: Map<string, GraphEdge>;
+  private imports = new Map<string, ImportRecord>();
   private activity: ActivityEntry[] = [];
 
   constructor(seed?: SeedGraph) {
@@ -130,6 +135,8 @@ export class MemoryStore implements GraphStore {
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
+      origin: "manual",
+      originRef: null,
     };
     this.nodes.set(node.id, node);
     this.appendActivity(actorId, "create", "node", node.id, null, { ...node });
@@ -197,6 +204,8 @@ export class MemoryStore implements GraphStore {
       decidedAt: null,
       createdAt: now,
       updatedAt: now,
+      origin: proposedBy === SIM_AI ? "sim-ai" : "manual",
+      originRef: null,
     };
     this.edges.set(edge.id, edge);
     this.appendActivity(proposedBy, "propose", "edge", edge.id, null, { ...edge });
@@ -273,6 +282,74 @@ export class MemoryStore implements GraphStore {
     this.edges.set(id, updated);
     this.appendActivity(actorId, "restore", "edge", id, { ...before }, { ...updated });
     return { ...updated };
+  }
+
+  // ---- imports -----------------------------------------------------------
+
+  async importNodes(inputs: ImportNodeInput[], ctx: ImportContext): Promise<GraphNode[]> {
+    this.requireUser(ctx.actorId);
+    const created: GraphNode[] = [];
+    for (const input of inputs) {
+      const now = this.now();
+      const node: GraphNode = {
+        id: input.id ?? this.newId(),
+        label: input.label,
+        type: input.type,
+        props: { ...(input.props ?? {}) },
+        createdBy: ctx.actorId,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+        origin: ctx.origin,
+        originRef: ctx.originRef,
+      };
+      this.nodes.set(node.id, node);
+      this.appendActivity(ctx.actorId, "import", "node", node.id, null, { ...node });
+      created.push({ ...node });
+    }
+    return created;
+  }
+
+  async importEdges(inputs: ImportEdgeInput[], ctx: ImportContext): Promise<GraphEdge[]> {
+    this.requireUser(ctx.actorId);
+    const now = this.now();
+    const created: GraphEdge[] = [];
+    for (const input of inputs) {
+      const edge: GraphEdge = {
+        id: this.newId(),
+        sourceId: input.sourceId,
+        targetId: input.targetId,
+        type: input.type,
+        props: { ...(input.props ?? {}) },
+        status: "pending",
+        proposedBy: ctx.actorId,
+        decidedBy: null,
+        decidedAt: null,
+        createdAt: now,
+        updatedAt: now,
+        origin: ctx.origin,
+        originRef: ctx.originRef,
+      };
+      this.edges.set(edge.id, edge);
+      this.appendActivity(ctx.actorId, "import", "edge", edge.id, null, { ...edge });
+      created.push({ ...edge });
+    }
+    return created;
+  }
+
+  async insertImport(record: ImportRecord): Promise<boolean> {
+    if (this.imports.has(record.importId)) return false;
+    this.imports.set(record.importId, { ...record });
+    return true;
+  }
+
+  async getImport(importId: string): Promise<ImportRecord | null> {
+    const record = this.imports.get(importId);
+    return record ? { ...record } : null;
+  }
+
+  async deleteImport(importId: string): Promise<void> {
+    this.imports.delete(importId);
   }
 
   // ---- activity ----------------------------------------------------------
