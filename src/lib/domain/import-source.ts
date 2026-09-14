@@ -1,4 +1,4 @@
-import { parseCsv } from "./csv";
+import { neutralizeFormulas, parseCsv } from "./csv";
 import type { CsvTable } from "./csv";
 import type { SkippedRow } from "./import-plan";
 
@@ -74,6 +74,8 @@ export interface SourceData {
   mappingProblems: string[];
   /** Rows dropped at parse time (e.g. missing label). */
   rowProblems: SkippedRow[];
+  /** Cells that began with = + - @ and were defanged with a leading apostrophe. */
+  neutralizedCells: number;
 }
 
 function normalizeHeader(header: string): string {
@@ -305,6 +307,7 @@ export function parseSourceData(
 ): SourceData {
   const rowProblems: SkippedRow[] = [];
   const issues: string[] = [];
+  let neutralizedCells = 0;
   let nodeRows: ParsedNodeRow[] = [];
   let edgeRows: ParsedEdgeRow[] = [];
   let nodeHeaders: string[] | null = null;
@@ -317,7 +320,9 @@ export function parseSourceData(
     edgeRows = parseGraphJsonEdges(graphJson);
   } else {
     if (csv.nodesCsv !== undefined) {
-      const table = parseCsv(csv.nodesCsv);
+      const neutralized = neutralizeFormulas(parseCsv(csv.nodesCsv));
+      const table = neutralized.table;
+      neutralizedCells += neutralized.count;
       nodeHeaders = table.headers;
       nodeMapping = confirmed?.nodes ?? suggestNodeMapping(table.headers);
       const problems = validateNodeMapping(table, nodeMapping);
@@ -329,7 +334,9 @@ export function parseSourceData(
       }
     }
     if (csv.edgesCsv !== undefined) {
-      const table = parseCsv(csv.edgesCsv);
+      const neutralized = neutralizeFormulas(parseCsv(csv.edgesCsv));
+      const table = neutralized.table;
+      neutralizedCells += neutralized.count;
       edgeHeaders = table.headers;
       edgeMapping = confirmed?.edges ?? suggestEdgeMapping(table.headers);
       const problems = validateEdgeMapping(table, edgeMapping);
@@ -352,5 +359,15 @@ export function parseSourceData(
     edgeMapping,
     mappingProblems: issues,
     rowProblems,
+    neutralizedCells,
   };
+}
+
+/** Human-readable notice about neutralized formula cells (none -> []). */
+export function neutralizationWarning(count: number): string[] {
+  return count > 0
+    ? [
+        `${count} cell(s) began with "= + - @" and were stored with a leading apostrophe so they cannot execute as spreadsheet formulas — correct them in the review queue if they were intentional.`,
+      ]
+    : [];
 }

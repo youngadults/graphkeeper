@@ -3,7 +3,7 @@ import { GraphError } from "@/lib/db/store";
 import type { ImportContext, ImportRecord } from "@/lib/db/store";
 import { ok, parseBody, requireActor, requireWriter, toErrorResponse } from "@/lib/api/http";
 import { importCommitSchema } from "@/lib/domain/validation";
-import { MAX_IMPORT_ROWS, parseSourceData } from "@/lib/domain/import-source";
+import { MAX_IMPORT_ROWS, neutralizationWarning, parseSourceData } from "@/lib/domain/import-source";
 import type { GraphJsonSource } from "@/lib/domain/import-source";
 import { analyzeImport } from "@/lib/domain/import-plan";
 import type { ImportCommitResult } from "@/lib/domain/import-plan";
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
         nodesCreated: nodes.length,
         edgesCreated: edges.length,
         skipped: plan.skipped,
-        warnings: plan.warnings,
+        warnings: [...neutralizationWarning(sourceData.neutralizedCells), ...plan.warnings],
       };
       return ok(result, 201);
     } catch (error) {

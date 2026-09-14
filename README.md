@@ -215,6 +215,10 @@ attributed to the importing user.
   run); retries return the first run's result with `duplicate: true` instead of
   re-importing (backed by the `imports` ledger).
 - **Row cap** — 5,000 rows per file; `422` beyond.
+- **Formula-injection guard** — CSV cells beginning with `=`, `+`, `-`, or `@`
+  are stored with a leading apostrophe (e.g. `'=SUM(A1)`) so they can never
+  execute as spreadsheet formulas in a later export; the preview reports how
+  many cells were neutralized and reviewers correct values in the review queue.
 - **UI** — header **⤓ Import** → pick files or paste → confirm the column mapping
   → preview counts + warnings → commit, then jump to the review queue. Edges in
   the details panel and review queue carry an origin badge.

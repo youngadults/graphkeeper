@@ -159,6 +159,19 @@ describe("parseSourceData", () => {
     expect(data.kind).toBe("graph-json");
     expect(MAX_IMPORT_ROWS).toBe(5000);
   });
+
+  it("neutralizes formula cells and reports the count", () => {
+    const data = parseSourceData(
+      "csv",
+      { nodesCsv: "label,type\n=SUM(A1),person\n+1555,person\nplain,person\n" },
+      undefined,
+      { nodes: { label: "label", type: "type" } },
+    );
+    expect(data.nodeRows[0]?.label).toBe("'=SUM(A1)");
+    expect(data.nodeRows[1]?.label).toBe("'+1555");
+    expect(data.nodeRows[2]?.label).toBe("plain");
+    expect(data.neutralizedCells).toBe(2);
+  });
 });
 
 describe("analyzeImport", () => {

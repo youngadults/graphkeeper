@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCsv } from "@/lib/domain/csv";
+import { neutralizeFormulas, parseCsv } from "@/lib/domain/csv";
 
 describe("parseCsv", () => {
   it("parses headers and rows", () => {
@@ -32,5 +32,32 @@ describe("parseCsv", () => {
     const table = parseCsv("  label , type \n");
     expect(table.headers).toEqual(["label", "type"]);
     expect(table.rows).toEqual([]);
+  });
+});
+
+describe("neutralizeFormulas", () => {
+  it("defangs cells beginning with = + - @", () => {
+    const { table, count } = neutralizeFormulas(parseCsv("a,b\n=SUM(A1),+1\n-5,@cmd\n"));
+    expect(table.rows).toEqual([["'=SUM(A1)", "'+1"], ["'-5", "'@cmd"]]);
+    expect(count).toBe(4);
+  });
+
+  it("leaves ordinary values and headers untouched", () => {
+    const { table, count } = neutralizeFormulas(parseCsv("note,total\nabc=def,x-y\n"));
+    expect(table.headers).toEqual(["note", "total"]);
+    expect(table.rows).toEqual([["abc=def", "x-y"]]);
+    expect(count).toBe(0);
+  });
+
+  it("neutralizes quoted formula cells too", () => {
+    const { table, count } = neutralizeFormulas(parseCsv('label\n"=CMD|\'/c calc\'!A1"\n'));
+    expect(table.rows).toEqual([["'=CMD|'/c calc'!A1"]]);
+    expect(count).toBe(1);
+  });
+
+  it("defangs a formula-like header", () => {
+    const { table, count } = neutralizeFormulas(parseCsv("=bad,value\nx,1\n"));
+    expect(table.headers).toEqual(["'=bad", "value"]);
+    expect(count).toBe(1);
   });
 });

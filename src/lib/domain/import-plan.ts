@@ -1,6 +1,7 @@
 import { NODE_TYPE_COLORS } from "./types";
 import type { EdgeOrigin, GraphEdge, GraphNode } from "@/lib/domain/types";
 import type { ImportEdgeInput, ImportNodeInput } from "@/lib/db/store";
+import { neutralizationWarning } from "./import-source";
 import type { EdgeFieldMapping, NodeFieldMapping, SourceData } from "./import-source";
 
 /**
@@ -207,7 +208,7 @@ export function buildImportPreview(
       sample: plan.edges.slice(0, 20),
     },
     mapping: { nodes: sourceData.nodeMapping, edges: sourceData.edgeMapping },
-    warnings: plan.warnings,
+    warnings: [...neutralizationWarning(sourceData.neutralizedCells), ...plan.warnings],
     skipped: plan.skipped,
   };
 }

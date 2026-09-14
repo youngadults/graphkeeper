@@ -104,6 +104,17 @@ describe("POST /api/import/preview", () => {
     const res = await PREVIEW(previewRequest({ source: {} }));
     expect(res.status).toBe(422);
   });
+
+  it("reports neutralized formula cells in the preview", async () => {
+    const res = await PREVIEW(previewRequest({ source: { nodesCsv: "label,type\n=SUM(A1),person\n" } }));
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as {
+      warnings: string[];
+      nodes: { sample: Array<{ label: string }> };
+    };
+    expect(data.warnings.some((warning) => warning.includes("leading apostrophe"))).toBe(true);
+    expect(data.nodes.sample[0]?.label).toBe("'=SUM(A1)");
+  });
 });
 
 describe("POST /api/import/commit", () => {
@@ -189,6 +200,22 @@ describe("POST /api/import/commit", () => {
 
     const store = getStore();
     expect((await store.listNodes()).filter((node) => node.label === "GK Idem Node")).toHaveLength(1);
+  });
+
+  it("stores formula cells neutralized on commit", async () => {
+    const store = getStore();
+    const res = await COMMIT(
+      commitRequest(ANALYST, {
+        importId: "route-formula-01",
+        source: { nodesCsv: "label,type\n=SUM(A1),person\n" },
+        mapping: { nodes: { label: "label", type: "type" } },
+        filename: "formula.csv",
+      }),
+    );
+    expect(res.status).toBe(201);
+    const imported = (await store.listNodes()).filter((node) => node.originRef === "formula.csv");
+    expect(imported).toHaveLength(1);
+    expect(imported[0]?.label).toBe("'=SUM(A1)");
   });
 
   it("422s an invalid confirmed mapping", async () => {
