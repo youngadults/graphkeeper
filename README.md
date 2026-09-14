@@ -213,7 +213,8 @@ attributed to the importing user.
   mapping returns `422`.
 - **Idempotent per `importId`** — a client-supplied id (e.g. a uuid per wizard
   run); retries return the first run's result with `duplicate: true` instead of
-  re-importing (backed by the `imports` ledger).
+  re-importing. Backed by the `imports` ledger, whose `import_id` primary key
+  is the database-level guard: concurrent double-submits cannot double-insert.
 - **Row cap** — 5,000 rows per file; `422` beyond.
 - **Formula-injection guard** — CSV cells beginning with `=`, `+`, `-`, or `@`
   are stored with a leading apostrophe (e.g. `'=SUM(A1)`) so they can never

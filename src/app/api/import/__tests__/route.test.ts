@@ -242,6 +242,47 @@ describe("POST /api/import/commit", () => {
     expect(data.error).toContain("Duplicate CSV header(s): label");
   });
 
+  it("keeps concurrent same-importId commits to a single insert", async () => {
+    const store = getStore();
+    const body = {
+      importId: "route-concurrent-001",
+      source: { nodesCsv: NODES_CSV },
+      mapping: { nodes: MAPPING.nodes },
+      filename: "concurrent.csv",
+    };
+    const [first, second] = await Promise.all([
+      COMMIT(commitRequest(ANALYST, body)),
+      COMMIT(commitRequest(ANALYST, body)),
+    ]);
+    const statuses = [first.status, second.status].sort((a, b) => a - b);
+    expect(statuses).toEqual([200, 201]);
+    // Exactly one insert ran: both nodes land once (a double-insert would leave four).
+    expect((await store.listNodes()).filter((node) => node.originRef === "concurrent.csv")).toHaveLength(2);
+    expect(await store.getImport("route-concurrent-001")).not.toBeNull();
+  });
+
+  it("treats a ledger unique violation as an idempotent duplicate", async () => {
+    const store = getStore();
+    const original = store.insertImport.bind(store);
+    store.insertImport = async () => {
+      throw new Error('duplicate key value violates unique constraint "imports_pkey"');
+    };
+    try {
+      const res = await COMMIT(
+        commitRequest(ANALYST, {
+          importId: "route-unique-01",
+          source: { nodesCsv: NODES_CSV },
+          mapping: { nodes: MAPPING.nodes },
+        }),
+      );
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as { duplicate: boolean };
+      expect(data.duplicate).toBe(true);
+    } finally {
+      store.insertImport = original;
+    }
+  });
+
   it("422s when a CSV commit lacks a confirmed mapping", async () => {
     const res = await COMMIT(
       commitRequest(ANALYST, { importId: "route-nomap-001", source: { nodesCsv: NODES_CSV } }),

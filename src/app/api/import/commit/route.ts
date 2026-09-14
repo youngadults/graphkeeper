@@ -10,6 +10,16 @@ import type { ImportCommitResult } from "@/lib/domain/import-plan";
 
 export const dynamic = "force-dynamic";
 
+/** Postgres unique violation (23505), as surfaced by pg / neon-http drivers. */
+function isUniqueViolation(error: unknown): boolean {
+  const candidates = [error, (error as { cause?: unknown }).cause];
+  return candidates.some(
+    (candidate) =>
+      candidate instanceof Error &&
+      ((candidate as { code?: unknown }).code === "23505" || /unique constraint|duplicate key/i.test(candidate.message)),
+  );
+}
+
 /**
  * Import commit: creates nodes (origin-tagged) and pending edges from the
  * confirmed mapping + source data, with `import` activity entries attributed
@@ -69,7 +79,22 @@ export async function POST(request: Request) {
       nodeCount: plan.nodes.length,
       edgeCount: plan.edges.length,
     };
-    if (!(await store.insertImport(record))) {
+    let inserted: boolean;
+    try {
+      inserted = await store.insertImport(record);
+    } catch (error) {
+      // The imports ledger's import_id primary key is the DB-level guard
+      // against concurrent duplicate submits: when two commits with the same
+      // importId race, the loser's insert raises a unique violation — treat
+      // it exactly like a lost onConflict and answer with the duplicate
+      // result instead of a 500.
+      if (isUniqueViolation(error)) {
+        inserted = false;
+      } else {
+        throw error;
+      }
+    }
+    if (!inserted) {
       // Idempotent retry: the importId was already processed.
       const existing = await store.getImport(body.importId);
       const result: ImportCommitResult = {
