@@ -69,6 +69,13 @@ export const listEdgesQuerySchema = z.object({
   status: z.enum(EDGE_STATUSES).optional(),
 });
 
+/** `?include=activity` optionally embeds the full activity log in graph exports. */
+export const exportGraphQuerySchema = z.object({
+  include: z.literal("activity").optional(),
+});
+
+export type ExportGraphQueryInput = z.infer<typeof exportGraphQuerySchema>;
+
 export type CreateNodeInput = z.infer<typeof createNodeSchema>;
 export type UpdateNodeInput = z.infer<typeof updateNodeSchema>;
 export type CreateEdgeInput = z.infer<typeof createEdgeSchema>;

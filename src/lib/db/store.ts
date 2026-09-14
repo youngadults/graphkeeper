@@ -13,7 +13,8 @@ export type GraphErrorCode =
   | "forbidden"
   | "not_found"
   | "conflict"
-  | "unprocessable";
+  | "unprocessable"
+  | "too_large";
 
 export class GraphError extends Error {
   readonly code: GraphErrorCode;
