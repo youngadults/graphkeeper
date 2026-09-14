@@ -22,6 +22,10 @@ recorded in an append-only **activity log** with full before/after snapshots.
   your edits. Approving sets `status='approved'`, `decided_by`, `decided_at`. A
   **Generate proposals** button (analyst/admin only) asks the simulated AI to propose
   new relationships from existing nodes.
+- **Provenance-first import** — bulk-load nodes and relationships from CSV files or
+  a graph-JSON document. Every row is tagged with its origin (`csv`, `graph-json`,
+  `sim-ai`, `manual`), imported relationships land in the review queue as pending,
+  and each import run is idempotent per import id (see [Import](#import)).
 - **Multiuser without auth** — pick any seeded user in the header; that user is the
   attributed actor on every action (sent via an `x-gk-actor` header, validated
   server-side). Viewers are read-only, enforced by the API.
@@ -156,6 +160,40 @@ Edge lifecycle: `pending → approved | rejected` (review), `pending|approved �
 retired` (soft delete), `rejected|retired → pending` (restore, decision cleared).
 New human-created edges always start `pending` — governance by default.
 
+Provenance columns: `nodes` and `edges` carry `origin` (`edge_origin` enum:
+`manual | csv | graph-json | sim-ai`) and `origin_ref` (source file name, null for
+manual rows). The **imports** ledger table (`import_id` pk, actor, source,
+filename, node/edge counts) powers import idempotency.
+
+## Import
+
+Bulk-load a graph from CSV files or graph JSON — the funnel top. Nothing lands
+silently: nodes are created immediately but origin-tagged; every imported
+relationship enters the review queue as `pending` with an `import` activity entry
+attributed to the importing user.
+
+- **`POST /api/import/preview`** — parses a source without touching the graph.
+  Returns parsed counts, the first 20 planned rows, an inferred field-mapping
+  suggestion (headers like `label`, `type`, `source`, `target` auto-match,
+  including suffixed variants like `node_id` or `employee_name`), and warnings
+  (unknown node types, dangling edge references).
+- **`POST /api/import/commit`** — creates nodes (`origin`, `origin_ref` = the
+  uploaded filename) and edges (`status: pending`, `origin`, `import` activity,
+  actor = requesting user). Analyst/admin only (viewers get `403`); an invalid
+  mapping returns `422`.
+- **Idempotent per `importId`** — a client-supplied id (e.g. a uuid per wizard
+  run); retries return the first run's result with `duplicate: true` instead of
+  re-importing (backed by the `imports` ledger).
+- **Row cap** — 5,000 rows per file; `422` beyond.
+- **UI** — header **⤓ Import** → pick files or paste → confirm the column mapping
+  → preview counts + warnings → commit, then jump to the review queue. Edges in
+  the details panel and review queue carry an origin badge.
+
+CSV mapping: `label` (+ optional `type`, `id`) for nodes, `source` / `target` /
+`type` for edges; unmapped columns become `props`. Edge references resolve against
+the import's own nodes first (by uuid or label), then the live graph; unresolvable
+rows are skipped with a reason instead of failing the whole import.
+
 ## API
 
 All routes are Next.js route handlers under `src/app/api`, validated with zod, and
@@ -173,6 +211,8 @@ return JSON. Mutations require the `x-gk-actor: <user-id>` header.
 | POST                | `/api/edges/[id]/review`     | `{ "action": "approve" \| "reject" }`          |
 | POST                | `/api/edges/[id]/restore`    | Back to pending                                |
 | POST                | `/api/proposals/generate`    | `{ "count": n }` — Sim-AI proposes n pending edges (analyst/admin) |
+| POST                | `/api/import/preview`        | `{ nodesCsv?, edgesCsv? } or { graphJson }` — parse, map, warn (no writes) |
+| POST                | `/api/import/commit`         | `{ importId, source, mapping?, filename? }` — create origin-tagged rows (analyst/admin) |
 | GET                 | `/api/activity`              | Feed, newest first (`?entityType=&entityId=&limit=`) |
 
 Errors: `400` validation, `403` viewer write attempt, `404` missing entity,
