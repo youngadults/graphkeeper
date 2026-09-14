@@ -1,6 +1,5 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import type { GraphEdge, GraphNode } from "@/lib/domain/types";
 import type { GraphStore, ImportContext, ImportRecord } from "./store";
 import { activityLog, edges, imports, nodes } from "./schema";
@@ -44,7 +43,7 @@ export function createImportMethods(
     await requireUserRow(ctx.actorId);
     if (inputs.length === 0) return [];
     const values = inputs.map((input) => ({
-      ...(input.id !== undefined ? { id: input.id } : {}),
+      id: input.id,
       label: input.label,
       type: input.type,
       props: input.props ?? {},

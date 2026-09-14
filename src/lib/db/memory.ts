@@ -292,7 +292,7 @@ export class MemoryStore implements GraphStore {
     for (const input of inputs) {
       const now = this.now();
       const node: GraphNode = {
-        id: input.id ?? this.newId(),
+        id: input.id,
         label: input.label,
         type: input.type,
         props: { ...(input.props ?? {}) },
@@ -339,7 +339,7 @@ export class MemoryStore implements GraphStore {
 
   async insertImport(record: ImportRecord): Promise<boolean> {
     if (this.imports.has(record.importId)) return false;
-    this.imports.set(record.importId, { ...record });
+    this.imports.set(record.importId, { ...record, createdAt: record.createdAt ?? this.now() });
     return true;
   }
 

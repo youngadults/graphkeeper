@@ -45,9 +45,9 @@ export interface CreateEdgeInput {
   props?: Record<string, unknown>;
 }
 
-/** One node row of a bulk import; `id` preserves a client-supplied uuid. */
+/** One node row of a bulk import; `id` is the pre-assigned uuid to insert. */
 export interface ImportNodeInput {
-  id?: string;
+  id: string;
   label: string;
   type: string;
   props?: Record<string, unknown>;
@@ -68,7 +68,7 @@ export interface ImportContext {
   originRef: string | null;
 }
 
-/** Ledger row for an accepted bulk import — powers importId idempotency. */
+  /** Ledger row for an accepted bulk import — powers importId idempotency. */
 export interface ImportRecord {
   importId: string;
   actor: string;
@@ -76,7 +76,8 @@ export interface ImportRecord {
   filename: string | null;
   nodeCount: number;
   edgeCount: number;
-  createdAt: string;
+  /** Timestamped by the store when omitted. */
+  createdAt?: string;
 }
 
 export interface UpdateEdgeInput {
