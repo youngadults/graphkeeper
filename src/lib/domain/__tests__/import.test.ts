@@ -61,6 +61,7 @@ function emptySource(partial: Partial<SourceData>): SourceData {
     edgeMapping: null,
     mappingProblems: [],
     rowProblems: [],
+    neutralizedCells: 0,
     ...partial,
   };
 }
