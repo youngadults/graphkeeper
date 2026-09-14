@@ -22,7 +22,7 @@ import type { CreateEdgeInput, CreateNodeInput, UpdateEdgeInput, UpdateNodeInput
 import { api } from "@/lib/client/api";
 import { shortId } from "@/lib/client/format";
 
-export type PanelTab = "details" | "review" | "history" | "create";
+export type PanelTab = "details" | "review" | "history" | "create" | "import";
 
 export interface Selection {
   kind: "node" | "edge";

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { GraphEdge } from "@/lib/domain/types";
 import { truncate } from "@/lib/client/format";
-import { ActorChip, ConfidencePill, StatusBadge } from "@/components/ui/badges";
+import { ActorChip, ConfidencePill, OriginBadge, StatusBadge } from "@/components/ui/badges";
 import { useWorkspace } from "@/components/workspace/WorkspaceProvider";
 
 /** Pending review queue — approve, reject, or open an edge to edit-then-approve. */
@@ -127,7 +127,8 @@ function ReviewCard({ edge, sourceLabel, targetLabel, canWrite, actorInfo, onOpe
     <li className="rounded-lg border border-slate-200 p-2.5 my-2">
       <div className="flex items-center gap-2">
         <ActorChip actor={proposer} />
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-1.5">
+          <OriginBadge origin={edge.origin} originRef={edge.originRef} />
           <StatusBadge status={edge.status} />
         </span>
       </div>
@@ -202,7 +203,8 @@ function RetiredCard({ edge, sourceLabel, targetLabel, canWrite, actorInfo, onOp
     <li className="rounded-lg border border-slate-200 p-2.5 my-2">
       <div className="flex items-center gap-2">
         <ActorChip actor={proposer} />
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-1.5">
+          <OriginBadge origin={edge.origin} originRef={edge.originRef} />
           <StatusBadge status={edge.status} />
         </span>
       </div>

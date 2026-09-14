@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { GraphEdge } from "@/lib/domain/types";
 import { timeAgo } from "@/lib/client/format";
-import { ActorChip, ConfidencePill, StatusBadge } from "@/components/ui/badges";
+import { ActorChip, ConfidencePill, OriginBadge, StatusBadge } from "@/components/ui/badges";
 import { PropsField, parsePropsText, serializeProps } from "@/components/panel/PropsField";
 import { ActivityList, useActivityFeed } from "@/components/panel/ActivityFeed";
 import { useWorkspace } from "@/components/workspace/WorkspaceProvider";
@@ -94,6 +94,7 @@ export default function EdgeDetails({ edge }: { edge: GraphEdge }) {
           <span className="text-base font-semibold">{source?.label ?? "?"}</span>
           <span className="text-xs text-slate-400">—{edge.type}→</span>
           <span className="text-base font-semibold">{target?.label ?? "?"}</span>
+          <OriginBadge origin={edge.origin} originRef={edge.originRef} />
           <StatusBadge status={edge.status} />
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
