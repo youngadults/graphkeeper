@@ -4,6 +4,7 @@ import DetailsPanel from "@/components/panel/DetailsPanel";
 import ReviewQueue from "@/components/panel/ReviewQueue";
 import HistoryPanel from "@/components/panel/HistoryPanel";
 import CreatePanel from "@/components/panel/CreatePanel";
+import HealthPanel from "@/components/panel/HealthPanel";
 import { useWorkspace } from "@/components/workspace/WorkspaceProvider";
 import type { PanelTab } from "@/components/workspace/WorkspaceProvider";
 
@@ -11,6 +12,7 @@ const TABS: Array<{ id: PanelTab; label: string }> = [
   { id: "details", label: "Details" },
   { id: "review", label: "Review" },
   { id: "history", label: "History" },
+  { id: "health", label: "Health" },
 ];
 
 export default function SidePanel() {
@@ -53,6 +55,7 @@ export default function SidePanel() {
         {tab === "review" && <ReviewQueue />}
         {tab === "history" && <HistoryPanel />}
         {tab === "create" && <CreatePanel />}
+        {tab === "health" && <HealthPanel />}
       </div>
     </div>
   );
