@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1680 1080" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1680" height="1080" fill="#f8fafc"/>
+
+  <!-- title -->
+  <text x="60" y="50" font-size="26" font-weight="700" fill="#0f172a">GraphKeeper — System Architecture</text>
+  <text x="60" y="76" font-size="13" fill="#475569">Provenance-first knowledge-graph governance for solo operators · youngadults/graphkeeper · main @ 6f9c73c · 2026-09-14</text>
+
+  <!-- connectors (drawn before boxes) -->
+  <g stroke="#94a3b8" stroke-width="2" fill="none">
+    <path d="M590 355 V393" marker-end="url(#arrow)"/>
+    <path d="M590 575 V613" marker-end="url(#arrow)"/>
+    <path d="M590 795 V813" marker-end="url(#arrow)"/>
+    <path d="M1410 203 V212" marker-end="url(#arrow)"/>
+    <path d="M1410 260 V271" marker-end="url(#arrow)"/>
+    <path d="M1410 323 V333" marker-end="url(#arrow)"/>
+    <path d="M1410 592 V612" marker-end="url(#arrow)"/>
+    <path d="M1410 686 V706" marker-end="url(#arrow)"/>
+  </g>
+  <g font-size="11" fill="#64748b">
+    <text x="605" y="378">HTTPS · JSON (same origin)</text>
+    <text x="605" y="598">validated objects</text>
+    <text x="605" y="810">typed SQL</text>
+    <text x="1425" y="605">lands pending</text>
+  </g>
+
+  <!-- 1 · browser -->
+  <rect x="60" y="100" width="1080" height="250" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <text x="80" y="128" font-size="15" font-weight="700" fill="#0f172a">1 · Browser — React 19 client app (Next.js App Router)</text>
+  <rect x="80" y="145" width="510" height="125" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="95" y="168" font-size="12" font-weight="700" fill="#0f172a">Cytoscape.js — the visual graph canvas</text>
+  <text x="95" y="190" font-size="11" fill="#334155">Core surface: drag, select, edit nodes / edges</text>
+  <text x="95" y="208" font-size="11" fill="#334155">Approved edges solid · pending dashed</text>
+  <text x="95" y="226" font-size="11" fill="#334155">Node colors by type: person / project / system</text>
+  <rect x="610" y="145" width="510" height="125" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="625" y="168" font-size="12" font-weight="700" fill="#0f172a">Side panel — the workflow tabs</text>
+  <text x="625" y="190" font-size="11" fill="#334155">Review queue · Details · History · Create</text>
+  <text x="625" y="208" font-size="11" fill="#334155">Health — audit snapshot from the export report</text>
+  <text x="625" y="226" font-size="11" fill="#334155">Import wizard: CSV / graph-JSON → map → preview → commit</text>
+  <rect x="80" y="280" width="1040" height="52" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="95" y="301" font-size="11" font-weight="600" fill="#0f172a">WorkspaceProvider (React context) — selection · active tab · actor picker</text>
+  <text x="95" y="320" font-size="11" fill="#475569">fake-multiuser: the actor id travels as a header; the server validates role on every write</text>
+
+  <!-- 2 · api -->
+  <rect x="60" y="400" width="1080" height="170" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="80" y="428" font-size="15" font-weight="700" fill="#0f172a">2 · API — Next.js route handlers (serverless functions on Vercel)</text>
+  <rect x="80" y="440" width="1040" height="52" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="95" y="462" font-size="11" font-weight="600" fill="#0f172a">POST/PATCH/DELETE /api/nodes · /api/edges · /api/proposals/generate</text>
+  <text x="95" y="481" font-size="11" fill="#334155">POST /api/import/preview · /api/import/commit · GET /api/export/graph · /api/export/report</text>
+  <rect x="80" y="502" width="505" height="52" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="95" y="524" font-size="11" font-weight="600" fill="#0f172a">zod schemas (validation.ts)</text>
+  <text x="95" y="542" font-size="11" fill="#334155">invalid input → 422 — never reaches storage</text>
+  <rect x="605" y="502" width="515" height="52" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="620" y="524" font-size="11" font-weight="600" fill="#0f172a">actor header → user lookup + role check</text>
+  <text x="620" y="542" font-size="11" fill="#334155">viewer: 403 on writes · analyst: review · admin: all</text>
+
+  <!-- 3 · domain -->
+  <rect x="60" y="620" width="1080" height="170" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+  <text x="80" y="648" font-size="15" font-weight="700" fill="#0f172a">3 · Domain — pure business logic (unit-tested, no I/O)</text>
+  <rect x="80" y="660" width="1040" height="40" rx="8" fill="#ffffff" stroke="#fcd34d"/>
+  <text x="95" y="685" font-size="11" font-weight="600" fill="#0f172a">Edge lifecycle: pending → approved | rejected → retired — restore brings retired edges back</text>
+  <rect x="80" y="710" width="505" height="62" rx="8" fill="#ffffff" stroke="#fcd34d"/>
+  <text x="95" y="732" font-size="11" font-weight="600" fill="#0f172a">Provenance on every node / edge:</text>
+  <text x="95" y="750" font-size="11" fill="#334155">origin = manual · csv · graph-json · sim-ai (+ origin_ref file)</text>
+  <rect x="605" y="710" width="515" height="62" rx="8" fill="#ffffff" stroke="#fcd34d"/>
+  <text x="620" y="732" font-size="11" font-weight="600" fill="#0f172a">buildGraphReport(): status counts · provenance by origin</text>
+  <text x="620" y="750" font-size="11" fill="#334155">pending backlog · 30-day approve / reject timeline</text>
+
+  <!-- 4 · data -->
+  <rect x="60" y="820" width="1080" height="180" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+  <text x="80" y="848" font-size="15" font-weight="700" fill="#0f172a">4 · Data — Drizzle ORM → Neon serverless Postgres</text>
+  <rect x="80" y="860" width="1040" height="56" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+  <text x="95" y="882" font-size="11" font-weight="600" fill="#0f172a">users · nodes · edges (status, origin, origin_ref) · activity_log (actor, action, before/after JSON) · imports (idempotency)</text>
+  <text x="95" y="902" font-size="11" fill="#334155">every mutation writes an activity_log entry — the audit trail cannot be bypassed by design</text>
+  <text x="80" y="944" font-size="11" fill="#334155">Versioned SQL migrations (drizzle-kit) · soft-delete via deleted_at · zod / schema / DB types kept in sync</text>
+  <text x="80" y="962" font-size="11" fill="#334155">Neon serverless driver over HTTPS — Postgres lives close to the Vercel functions</text>
+
+  <!-- right column -->
+  <rect x="1200" y="100" width="430" height="335" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <text x="1220" y="128" font-size="15" font-weight="700" fill="#0f172a">The life of an edge</text>
+  <rect x="1220" y="145" width="380" height="56" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="1235" y="166" font-size="11" font-weight="600" fill="#0f172a">1 · Created — three doors:</text>
+  <text x="1235" y="184" font-size="10.5" fill="#334155">manual CRUD · import batch · Sim-AI generator</text>
+  <rect x="1220" y="214" width="380" height="44" rx="8" fill="#fef3c7" stroke="#fcd34d"/>
+  <text x="1235" y="240" font-size="11" font-weight="600" fill="#0f172a">2 · Pending — waits in the review queue</text>
+  <rect x="1220" y="273" width="380" height="48" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="1235" y="294" font-size="11" font-weight="600" fill="#0f172a">3 · Decision — approve · reject ·</text>
+  <text x="1235" y="310" font-size="11" font-weight="600" fill="#0f172a">edit-approve (analyst / admin only)</text>
+  <rect x="1220" y="335" width="380" height="44" rx="8" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <text x="1235" y="361" font-size="11" font-weight="600" fill="#0f172a">4 · Approved — solid on canvas, in the report</text>
+  <text x="1235" y="400" font-size="10.5" fill="#64748b">⇣ every transition lands in activity_log</text>
+  <text x="1235" y="416" font-size="10.5" fill="#64748b">(actor, action, before / after) — the audit trail</text>
+
+  <rect x="1200" y="475" width="430" height="315" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <text x="1220" y="503" font-size="15" font-weight="700" fill="#0f172a">Why it is shaped this way — the funnel</text>
+  <rect x="1220" y="520" width="380" height="70" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="1235" y="541" font-size="11" font-weight="700" fill="#0f172a">FREE — the hook</text>
+  <text x="1235" y="560" font-size="10.5" fill="#334155">Visual canvas + provenance-first import</text>
+  <text x="1235" y="577" font-size="10.5" fill="#334155">(CSV · GraphRAG / LLM-builder JSON output)</text>
+  <rect x="1220" y="614" width="380" height="70" rx="8" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <text x="1235" y="635" font-size="11" font-weight="700" fill="#0f172a">PAID — the product</text>
+  <text x="1235" y="654" font-size="10.5" fill="#334155">Review queue + provenance trail</text>
+  <text x="1235" y="671" font-size="10.5" fill="#334155">+ validation and audit exports</text>
+  <rect x="1220" y="708" width="380" height="56" rx="8" fill="#fef3c7" stroke="#fcd34d"/>
+  <text x="1235" y="729" font-size="11" font-weight="700" fill="#0f172a">Compliance hook: EU AI Act Article 10</text>
+  <text x="1235" y="746" font-size="10.5" fill="#334155">documented data governance for high-risk AI</text>
+
+  <rect x="1200" y="830" width="430" height="185" rx="10" fill="#f8fafc" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="1220" y="858" font-size="15" font-weight="700" fill="#0f172a">Runs on</text>
+  <rect x="1220" y="872" width="380" height="40" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1235" y="896" font-size="11" fill="#334155">▲ Vercel — Next.js app + API routes (serverless)</text>
+  <rect x="1220" y="922" width="380" height="40" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1235" y="946" font-size="11" fill="#334155">GitHub Actions CI — lint · tsc · vitest · build</text>
+  <rect x="1220" y="972" width="380" height="40" rx="8" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1235" y="996" font-size="11" fill="#334155">GitHub — PR flow; merges only on your approval</text>
+
+  <!-- footer -->
+  <text x="60" y="1032" font-size="12" font-weight="600" fill="#334155">One request path: UI → route handler → zod → domain → Drizzle → Postgres — and every mutation writes an activity_log entry.</text>
+  <text x="60" y="1052" font-size="11" fill="#64748b">Trust model: no real auth in the MVP — the UI actor picker is convenience; the server validates the actor header on every request. Simulated AI proposals use the sim-ai sentinel.</text>
+</svg>
