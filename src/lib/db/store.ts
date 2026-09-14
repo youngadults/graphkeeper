@@ -1,6 +1,7 @@
 import type {
   ActivityEntry,
   ActivityEntityType,
+  EdgeOrigin,
   EdgeStatus,
   GraphEdge,
   GraphNode,
@@ -45,6 +46,41 @@ export interface CreateEdgeInput {
   props?: Record<string, unknown>;
 }
 
+/** One node row of a bulk import; `id` is the pre-assigned uuid to insert. */
+export interface ImportNodeInput {
+  id: string;
+  label: string;
+  type: string;
+  props?: Record<string, unknown>;
+}
+
+/** One edge row of a bulk import; endpoints are pre-resolved node uuids. */
+export interface ImportEdgeInput {
+  sourceId: string;
+  targetId: string;
+  type: string;
+  props?: Record<string, unknown>;
+}
+
+/** Origin context stamped onto every row of one import run. */
+export interface ImportContext {
+  actorId: string;
+  origin: EdgeOrigin;
+  originRef: string | null;
+}
+
+  /** Ledger row for an accepted bulk import — powers importId idempotency. */
+export interface ImportRecord {
+  importId: string;
+  actor: string;
+  source: "csv" | "graph-json";
+  filename: string | null;
+  nodeCount: number;
+  edgeCount: number;
+  /** Timestamped by the store when omitted. */
+  createdAt?: string;
+}
+
 export interface UpdateEdgeInput {
   sourceId?: string;
   targetId?: string;
@@ -85,4 +121,18 @@ export interface GraphStore {
   restoreEdge(id: string, actorId: string): Promise<GraphEdge>;
 
   listActivity(filter?: ActivityFilter): Promise<ActivityEntry[]>;
+
+  /**
+   * Bulk-create nodes/edges for an import run: every row is tagged with the
+   * run's origin/originRef and logged with the `import` action. Imported
+   * edges always enter as `pending` (governance by default). Inputs are
+   * expected pre-validated by the caller (unique ids, resolved endpoints).
+   */
+  importNodes(inputs: ImportNodeInput[], ctx: ImportContext): Promise<GraphNode[]>;
+  importEdges(inputs: ImportEdgeInput[], ctx: ImportContext): Promise<GraphEdge[]>;
+
+  /** Idempotency ledger. `insertImport` returns false when importId already exists. */
+  insertImport(record: ImportRecord): Promise<boolean>;
+  getImport(importId: string): Promise<ImportRecord | null>;
+  deleteImport(importId: string): Promise<void>;
 }

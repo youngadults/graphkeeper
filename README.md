@@ -22,6 +22,10 @@ recorded in an append-only **activity log** with full before/after snapshots.
   your edits. Approving sets `status='approved'`, `decided_by`, `decided_at`. A
   **Generate proposals** button (analyst/admin only) asks the simulated AI to propose
   new relationships from existing nodes.
+- **Provenance-first import** — bulk-load nodes and relationships from CSV files or
+  a graph-JSON document. Every row is tagged with its origin (`csv`, `graph-json`,
+  `sim-ai`, `manual`), imported relationships land in the review queue as pending,
+  and each import run is idempotent per import id (see [Import](#import)).
 - **Multiuser without auth** — pick any seeded user in the header; that user is the
   attributed actor on every action (sent via an `x-gk-actor` header, validated
   server-side). Viewers are read-only, enforced by the API.
@@ -99,13 +103,68 @@ In demo mode data resets when the dev server restarts. No env vars, no database.
 1. Create a database at [neon.tech](https://neon.tech) and copy the **pooled**
    connection string.
 2. `cp .env.example .env.local` and set `POSTGRES_URL`.
-3. Push the schema and load the demo domain:
+3. Run the versioned migrations and load the demo domain:
 
 ```bash
-npm run db:push    # drizzle-kit push — creates tables/enums
-npm run db:seed    # clears + reseeds the demo graph
+npm run db:migrate  # drizzle-kit migrate — applies the SQL migrations in ./drizzle
+npm run db:seed     # clears + reseeds the demo graph
 npm run dev
 ```
+
+### Schema migrations
+
+Schema changes are versioned SQL migrations in `drizzle/` (Drizzle Kit), not a
+push-to-database workflow:
+
+1. Edit `src/lib/db/schema.ts`.
+2. `npm run db:generate` — generates a timestamped SQL migration in `drizzle/`
+   (diffed against the previous snapshot in `drizzle/meta/`).
+3. Review the generated SQL, commit it with your schema change.
+4. `npm run db:migrate` — applies all pending migrations in order, recording
+   progress in the `drizzle.__drizzle_migrations` journal table.
+
+All future schema changes go through migrations. Database changes that ship
+with backfills (e.g. provenance tags on pre-existing edges) are encoded in the
+migration SQL itself, so `db:migrate` is the only step needed.
+
+**Adopting migrations on a database that was previously managed with `db:push`**
+requires marking the baseline migration (`0000_baseline_schema.sql`) as applied
+so `db:migrate` starts *after* it. Pick exactly one path — **never drop tables
+in a database whose data you want to keep**:
+
+- **Dev / demo database (disposable data):** recreate it. Drop the database, or
+  just the GraphKeeper tables (`users`, `nodes`, `edges`, `imports`,
+  `activity_log`), then `npm run db:migrate && npm run db:seed`. Dropping
+  tables destroys everything in them — only acceptable when nothing in the
+  database needs to be kept.
+- **Production / any database with data to keep (non-destructive):** baseline
+  in place, then migrate forward:
+
+  1. Back up the database (`pg_dump`).
+  2. Create the journal and mark the baseline as already applied, using the
+     baseline entry's `tag` and `when` values from `drizzle/meta/_journal.json`:
+
+     ```sql
+     CREATE SCHEMA IF NOT EXISTS drizzle;
+     CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (
+       id SERIAL PRIMARY KEY,
+       hash text NOT NULL,
+       created_at numeric NOT NULL
+     );
+     INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+     VALUES ('0000_baseline_schema', 1789381025960);
+     ```
+
+  3. `npm run db:migrate` — the baseline is skipped; only later migrations run
+     (e.g. `0001_import_provenance.sql`, whose backfills are in-place `UPDATE`s
+     that tag existing rows without replacing anything).
+  4. Verify: row counts and spot checks (e.g. `SELECT origin, count(*) FROM
+     edges GROUP BY origin;`) before and after.
+
+  The accidental-replay safety net is that the baseline uses plain `CREATE
+  TABLE`, which errors on existing tables instead of overwriting data. If a
+  migration step misbehaves, restore the backup and re-run the baselining
+  steps.
 
 ## Tests
 
@@ -144,6 +203,48 @@ Edge lifecycle: `pending → approved | rejected` (review), `pending|approved �
 retired` (soft delete), `rejected|retired → pending` (restore, decision cleared).
 New human-created edges always start `pending` — governance by default.
 
+Provenance columns: `nodes` and `edges` carry `origin` (`edge_origin` enum:
+`manual | csv | graph-json | sim-ai`) and `origin_ref` (source file name, null for
+manual rows). The **imports** ledger table (`import_id` pk, actor, source,
+filename, node/edge counts) powers import idempotency.
+
+## Import
+
+Bulk-load a graph from CSV files or graph JSON — the funnel top. Nothing lands
+silently: nodes are created immediately but origin-tagged; every imported
+relationship enters the review queue as `pending` with an `import` activity entry
+attributed to the importing user.
+
+- **`POST /api/import/preview`** — parses a source without touching the graph.
+  Returns parsed counts, the first 20 planned rows, an inferred field-mapping
+  suggestion (headers like `label`, `type`, `source`, `target` auto-match,
+  including suffixed variants like `node_id` or `employee_name`), and warnings
+  (unknown node types, dangling edge references).
+- **`POST /api/import/commit`** — creates nodes (`origin`, `origin_ref` = the
+  uploaded filename) and edges (`status: pending`, `origin`, `import` activity,
+  actor = requesting user). Analyst/admin only (viewers get `403`); an invalid
+  mapping returns `422`.
+- **Idempotent per `importId`** — a client-supplied id (e.g. a uuid per wizard
+  run); retries return the first run's result with `duplicate: true` instead of
+  re-importing. Backed by the `imports` ledger, whose `import_id` primary key
+  is the database-level guard: concurrent double-submits cannot double-insert.
+- **Row cap** — 5,000 rows per file; `422` beyond.
+- **Formula-injection guard** — CSV cells beginning with `=`, `+`, `-`, or `@`
+  are stored with a leading apostrophe (e.g. `'=SUM(A1)`) so they can never
+  execute as spreadsheet formulas in a later export; the preview reports how
+  many cells were neutralized and reviewers correct values in the review queue.
+- **Duplicate columns rejected** — a CSV whose header row repeats a column
+  name is flagged in the preview and rejected with `422` on commit; rename
+  columns so each field maps uniquely.
+- **UI** — header **⤓ Import** → pick files or paste → confirm the column mapping
+  → preview counts + warnings → commit, then jump to the review queue. Edges in
+  the details panel and review queue carry an origin badge.
+
+CSV mapping: `label` (+ optional `type`, `id`) for nodes, `source` / `target` /
+`type` for edges; unmapped columns become `props`. Edge references resolve against
+the import's own nodes first (by uuid or label), then the live graph; unresolvable
+rows are skipped with a reason instead of failing the whole import.
+
 ## API
 
 All routes are Next.js route handlers under `src/app/api`, validated with zod, and
@@ -161,6 +262,8 @@ return JSON. Mutations require the `x-gk-actor: <user-id>` header.
 | POST                | `/api/edges/[id]/review`     | `{ "action": "approve" \| "reject" }`          |
 | POST                | `/api/edges/[id]/restore`    | Back to pending                                |
 | POST                | `/api/proposals/generate`    | `{ "count": n }` — Sim-AI proposes n pending edges (analyst/admin) |
+| POST                | `/api/import/preview`        | `{ nodesCsv?, edgesCsv? } or { graphJson }` — parse, map, warn (no writes) |
+| POST                | `/api/import/commit`         | `{ importId, source, mapping?, filename? }` — create origin-tagged rows (analyst/admin) |
 | GET                 | `/api/activity`              | Feed, newest first (`?entityType=&entityId=&limit=`) |
 | GET                 | `/api/export/graph`          | Full graph export (`?include=activity` embeds the activity log) |
 | GET                 | `/api/export/report`         | Validation/audit compliance report |
@@ -249,8 +352,8 @@ workspace reloads and needs no credentials to view.
    `vercel.json` pins the `nextjs` framework preset.
 2. Add `POSTGRES_URL` in Project → Settings → Environment Variables (a Neon
    instance via the Vercel Marketplace integration works directly).
-3. Run the schema push + seed once against that database
-   (`npm run db:push && npm run db:seed` locally with the same `POSTGRES_URL`).
+3. Run the migrations + seed once against that database
+   (`npm run db:migrate && npm run db:seed` locally with the same `POSTGRES_URL`).
 4. Deploy. CI (`.github/workflows/ci.yml`) runs lint + typecheck + tests + build on
    every PR, so only green branches merge.
 
@@ -276,7 +379,7 @@ scripts/seed.ts        # loads the demo domain into Postgres
   [Security / trust model](#security--trust-model)).
 - Node restore is API-only (no UI); no bulk review actions; no server-side pagination.
 - Collaboration is ~20s polling, not websockets; concurrent edits are last-write-wins.
-- Schema sync uses `drizzle-kit push`; versioned migrations are the next step.
+- Versioned migrations are in place; there is no automated down-migration/rollback path.
 - In-memory demo mode resets on restart and is per-server-process (single-node only).
 - Only unit/integration tests on domain + store logic; no Playwright E2E yet.
 
