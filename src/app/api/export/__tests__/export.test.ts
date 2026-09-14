@@ -115,7 +115,7 @@ describe("GET /api/export/report", () => {
       nodeCount: number;
       edgeCount: number;
       countsByStatus: Record<string, number>;
-      provenance: { simAi: number; human: number };
+      provenance: Record<string, number>;
       pendingBacklog: { count: number; oldestPendingAgeDays: number };
       timeline: Array<{ date: string; approvals: number; rejections: number }>;
     };
@@ -126,7 +126,8 @@ describe("GET /api/export/report", () => {
     for (const key of statusKeys) {
       expect(typeof data.countsByStatus[key]).toBe("number");
     }
-    expect(data.provenance.simAi + data.provenance.human).toBe(SEED.edges.length);
+    expect(Object.values(data.provenance).reduce((a, b) => a + b, 0)).toBe(SEED.edges.length);
+    expect(Object.keys(data.provenance).sort()).toEqual(["csv", "graph-json", "manual", "sim-ai"]);
     expect(data.pendingBacklog.count).toBeGreaterThan(0);
     expect(Array.isArray(data.timeline)).toBe(true);
     expect(data.timeline.length).toBe(30);

@@ -1,4 +1,10 @@
-import { SIM_AI, type ActivityAction, type ActivityEntry, type GraphEdge } from "./types";
+import {
+  EDGE_ORIGINS,
+  type ActivityAction,
+  type ActivityEntry,
+  type EdgeOrigin,
+  type GraphEdge,
+} from "./types";
 
 /**
  * Maximum number of edges serialized in a graph export. Beyond this the export
@@ -20,10 +26,8 @@ export interface StatusCounts {
   retired: number;
 }
 
-export interface ProvenanceSplit {
-  simAi: number;
-  human: number;
-}
+/** Edge counts keyed by provenance origin (manual / csv / graph-json / sim-ai). */
+export type ProvenanceCounts = Record<EdgeOrigin, number>;
 
 /** One `approve` or `reject` decision recorded for a day. */
 export interface TimelinePoint {
@@ -46,13 +50,11 @@ export interface GraphReport {
   nodeCount: number;
   edgeCount: number;
   countsByStatus: StatusCounts;
-  provenance: ProvenanceSplit;
+  provenance: ProvenanceCounts;
   pendingBacklog: PendingBacklog;
   /** Approvals and rejections per day over the last 30 days. */
   timeline: TimelinePoint[];
 }
-
-export const SIM_AI_ACTOR = SIM_AI;
 
 function dayKey(iso: string): string {
   // Local calendar day of the timestamp (server timezone).
@@ -63,8 +65,11 @@ function dayKey(iso: string): string {
   return `${year}-${month}-${day}`;
 }
 
-export function isHumanProposed(edge: GraphEdge): boolean {
-  return edge.proposedBy !== SIM_AI;
+/** Zero-filled origin counter in canonical EDGE_ORIGINS order. */
+function zeroProvenance(): ProvenanceCounts {
+  const counts = {} as ProvenanceCounts;
+  for (const origin of EDGE_ORIGINS) counts[origin] = 0;
+  return counts;
 }
 
 /**
@@ -78,14 +83,12 @@ export function buildGraphReport(
   generatedAt = new Date().toISOString(),
 ): GraphReport {
   const countsByStatus: StatusCounts = { pending: 0, approved: 0, rejected: 0, retired: 0 };
-  let simAi = 0;
-  let human = 0;
+  const provenance = zeroProvenance();
   let oldestPendingAt: string | null = null;
 
   for (const edge of edges) {
     countsByStatus[edge.status] += 1;
-    if (isHumanProposed(edge)) human += 1;
-    else simAi += 1;
+    provenance[edge.origin] += 1;
     if (edge.status === "pending" && (oldestPendingAt === null || edge.createdAt < oldestPendingAt)) {
       oldestPendingAt = edge.createdAt;
     }
@@ -127,7 +130,7 @@ export function buildGraphReport(
     nodeCount: nodes.length,
     edgeCount: edges.length,
     countsByStatus,
-    provenance: { simAi, human },
+    provenance,
     pendingBacklog: {
       count: pendingCount,
       oldestPendingAgeDays,

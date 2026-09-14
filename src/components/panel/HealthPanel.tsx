@@ -5,6 +5,7 @@ import type { GraphReport } from "@/lib/domain/report";
 import { api } from "@/lib/client/api";
 import { timeAgo } from "@/lib/client/format";
 import { useWorkspace } from "@/components/workspace/WorkspaceProvider";
+import { EDGE_ORIGINS, type EdgeOrigin } from "@/lib/domain/types";
 
 const STATUS_META: Array<{ key: keyof GraphReport["countsByStatus"]; label: string; tone: string }> = [
   { key: "approved", label: "Approved", tone: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -12,6 +13,13 @@ const STATUS_META: Array<{ key: keyof GraphReport["countsByStatus"]; label: stri
   { key: "rejected", label: "Rejected", tone: "bg-rose-50 text-rose-700 border-rose-200" },
   { key: "retired", label: "Retired", tone: "bg-slate-100 text-slate-600 border-slate-200" },
 ];
+
+const ORIGIN_META: Record<EdgeOrigin, { label: string; color: string }> = {
+  manual: { label: "Manual", color: "#2563eb" },
+  csv: { label: "CSV", color: "#d97706" },
+  "graph-json": { label: "Graph JSON", color: "#059669" },
+  "sim-ai": { label: "Sim AI", color: "#7c3aed" },
+};
 
 /** Graph health panel — glanceable compliance/audit snapshot from the export report. */
 export default function HealthPanel() {
@@ -45,8 +53,7 @@ export default function HealthPanel() {
   }
 
   const { countsByStatus: counts, provenance, pendingBacklog: backlog } = report;
-  const totalProvenance = provenance.simAi + provenance.human;
-  const aiPct = totalProvenance === 0 ? 0 : Math.round((provenance.simAi / totalProvenance) * 100);
+  const totalProvenance = Object.values(provenance).reduce((a, b) => a + b, 0);
   // Final 7 timeline points (most recent first on screen).
   const recent = report.timeline.slice(-7).reverse();
 
@@ -82,15 +89,36 @@ export default function HealthPanel() {
       </div>
 
       <div>
-        <p className="text-xs font-medium text-slate-500">Who proposed the edges</p>
+        <p className="text-xs font-medium text-slate-500">Where edges came from</p>
         <div className="mt-1.5 rounded-lg border border-slate-200 p-3">
-          <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full bg-violet-500" style={{ width: `${aiPct}%` }} />
-          </div>
-          <div className="flex justify-between text-[11px] text-slate-600">
-            <span>🤖 Sim AI · {provenance.simAi}</span>
-            <span>Human · {provenance.human}</span>
-          </div>
+          {totalProvenance === 0 ? (
+            <p className="text-[11px] text-slate-500">No edges yet.</p>
+          ) : (
+            <>
+              <div className="mb-2 flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                {EDGE_ORIGINS.map((origin) => (
+                  <div
+                    key={origin}
+                    style={{
+                      width: `${(provenance[origin] / totalProvenance) * 100}%`,
+                      backgroundColor: ORIGIN_META[origin].color,
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-slate-600">
+                {EDGE_ORIGINS.map((origin) => (
+                  <span key={origin} className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-2 w-2 rounded-full"
+                      style={{ backgroundColor: ORIGIN_META[origin].color }}
+                    />
+                    {ORIGIN_META[origin].label} · {provenance[origin]}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

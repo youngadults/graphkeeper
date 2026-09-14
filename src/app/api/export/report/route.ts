@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 /**
  * Validation / audit report — the compliance-evidence artifact. Read-only, so
  * every role may request it. Aggregates node/edge counts, status distribution,
- * provenance split (Sim AI vs human via `proposed_by`), the pending backlog, and
+ * provenance counts by origin (manual / csv / graph-json / sim-ai), the pending
+ * backlog, and
  * the last 30 days of approvals/rejections from the activity log.
  */
 export async function GET() {

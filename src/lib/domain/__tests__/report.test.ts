@@ -8,13 +8,14 @@ import type { ActivityAction, GraphEdge } from "@/lib/domain/types";
 const DAY_MS = 86_400_000;
 const fixedNow = new Date("2026-03-10T12:00:00.000Z").toISOString();
 
-function edge(overrides: Partial<GraphEdge> & { id: string; createdAt: string; proposedBy: string }): GraphEdge {
+function edge(overrides: Partial<GraphEdge> & { id: string; createdAt: string }): GraphEdge {
   return {
     sourceId: "00000000-0000-4000-8000-000000000001",
     targetId: "00000000-0000-4000-8000-000000000002",
     type: "related_to",
     props: {},
     status: "approved",
+    proposedBy: "user-a",
     decidedBy: null,
     decidedAt: null,
     origin: "manual",
@@ -46,14 +47,15 @@ describe("buildGraphReport", () => {
     expect(report.generatedAt).toBe(fixedNow);
   });
 
-  it("splits provenance by proposed_by (sim-ai vs human)", () => {
+  it("counts provenance by origin", () => {
     const edges = [
-      edge({ id: "1", status: "pending", proposedBy: SIM_AI, createdAt: fixedNow }),
-      edge({ id: "2", status: "pending", proposedBy: "user-a", createdAt: fixedNow }),
-      edge({ id: "3", status: "pending", proposedBy: "user-b", createdAt: fixedNow }),
+      edge({ id: "1", status: "pending", origin: "sim-ai", createdAt: fixedNow }),
+      edge({ id: "2", status: "pending", origin: "manual", createdAt: fixedNow }),
+      edge({ id: "3", status: "pending", origin: "csv", createdAt: fixedNow }),
+      edge({ id: "4", status: "pending", origin: "manual", createdAt: fixedNow }),
     ];
     const report = buildGraphReport([], edges, [], fixedNow);
-    expect(report.provenance).toEqual({ simAi: 1, human: 2 });
+    expect(report.provenance).toEqual({ manual: 2, csv: 1, "graph-json": 0, "sim-ai": 1 });
   });
 
   it("reports pending backlog count and oldest pending age in days", () => {
@@ -118,6 +120,6 @@ describe("buildGraphReport", () => {
     expect(report.edgeCount).toBe(seed.edges.length);
     const statusSum = Object.values(report.countsByStatus).reduce((a, b) => a + b, 0);
     expect(statusSum).toBe(seed.edges.length);
-    expect(report.provenance.simAi + report.provenance.human).toBe(seed.edges.length);
+    expect(Object.values(report.provenance).reduce((a, b) => a + b, 0)).toBe(seed.edges.length);
   });
 });
