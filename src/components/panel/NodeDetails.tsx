@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { GraphNode } from "@/lib/domain/types";
 import { timeAgo } from "@/lib/client/format";
-import { ActorChip } from "@/components/ui/badges";
+import { ActorChip, StatusBadge } from "@/components/ui/badges";
 import { PropsField, parsePropsText, serializeProps } from "@/components/panel/PropsField";
 import { ActivityList, useActivityFeed } from "@/components/panel/ActivityFeed";
 import { useWorkspace } from "@/components/workspace/WorkspaceProvider";
 
 export default function NodeDetails({ node }: { node: GraphNode }) {
-  const { canWrite, updateNode, deleteNode, restoreNode, actorInfo, refreshCount, select, notify } = useWorkspace();
+  const { graph, canWrite, updateNode, deleteNode, restoreNode, actorInfo, refreshCount, select, notify } = useWorkspace();
   const [label, setLabel] = useState(node.label);
   const [type, setType] = useState(node.type);
   const [propsText, setPropsText] = useState(serializeProps(node.props));
@@ -72,6 +72,11 @@ export default function NodeDetails({ node }: { node: GraphNode }) {
   };
 
   const creator = actorInfo(node.createdBy);
+
+  // Relationships touching this node, with the endpoint label resolved for each.
+  const relationships =
+    graph?.edges.filter((edge) => edge.sourceId === node.id || edge.targetId === node.id) ?? [];
+  const labelById = new Map(graph?.nodes.map((n) => [n.id, n.label]) ?? []);
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4">
@@ -152,6 +157,37 @@ export default function NodeDetails({ node }: { node: GraphNode }) {
           Viewers are read-only — switch to an analyst or admin user to edit.
         </p>
       )}
+
+      <div>
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          Relationships ({relationships.length})
+        </p>
+        {relationships.length === 0 ? (
+          <p className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500">
+            No relationships yet.
+          </p>
+        ) : (
+          <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200">
+            {relationships.map((edge) => {
+              const sourceLabel = labelById.get(edge.sourceId) ?? "?";
+              const targetLabel = labelById.get(edge.targetId) ?? "?";
+              return (
+                <button
+                  key={edge.id}
+                  type="button"
+                  onClick={() => select({ kind: "edge", id: edge.id })}
+                  className="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-[11px] text-slate-600 hover:bg-slate-50 last:border-b-0"
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    {sourceLabel} →{edge.type}→ {targetLabel}
+                  </span>
+                  <StatusBadge status={edge.status} />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <div>
         <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">History</p>
