@@ -7,6 +7,9 @@ import { nodeColor } from "@/lib/domain/types";
 import type { EdgeStatus, GraphEdge, GraphNode, GraphSnapshot } from "@/lib/domain/types";
 import type { Selection } from "@/components/workspace/WorkspaceProvider";
 
+// Default view shows only approved relationships; the other statuses are one click away.
+const DEFAULT_HIDDEN_STATUSES: ReadonlySet<string> = new Set(["pending", "rejected", "retired"]);
+
 // Initial load spreads nodes from scratch (randomize). Filter toggles re-use
 // the existing positions via a non-randomized pass so visible nodes keep their
 // relative arrangement while relaxing into the freed space.
@@ -268,9 +271,9 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
   const selectRef = useRef(onSelect);
   const didInitialLayout = useRef(false);
   const hiddenTypesRef = useRef<Set<string>>(new Set());
-  const hiddenStatusesRef = useRef<Set<string>>(new Set());
+  const hiddenStatusesRef = useRef<Set<string>>(new Set(DEFAULT_HIDDEN_STATUSES));
   const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set());
-  const [hiddenStatuses, setHiddenStatuses] = useState<Set<string>>(new Set());
+  const [hiddenStatuses, setHiddenStatuses] = useState<Set<string>>(new Set(DEFAULT_HIDDEN_STATUSES));
 
   useEffect(() => {
     graphRef.current = graph;
