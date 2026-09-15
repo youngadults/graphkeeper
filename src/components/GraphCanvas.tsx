@@ -21,9 +21,9 @@ function layoutOptions(randomize: boolean): cytoscape.LayoutOptions {
   return {
     name: "fcose",
     animate: true,
-    animationDuration: 350,
+    animationDuration: 200,
     padding: 60,
-    idealEdgeLength: () => 200,
+    idealEdgeLength: () => 150,
     nodeRepulsion: 10000,
     gravity: 0.35,
     numIter: 2500,
@@ -52,8 +52,8 @@ const STYLE: cytoscape.StylesheetJson = [
       "text-halign": "center",
       "text-max-width": "60px",
       "text-wrap": "wrap",
-      width: 88,
-      height: 88,
+      width: 70,
+      height: 65,
       "border-width": 1.5,
       "border-color": "#94a3b8",
       "overlay-padding": 4,
@@ -429,7 +429,7 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
       {!empty && allHidden && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <p className="rounded-lg bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
-            No nodes match the current filter — click a chip to restore.
+            No nodes match the current filter — select a node type to view.
           </p>
         </div>
       )}
