@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1680 1080" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1680" height="1080" fill="#f8fafc"/>
+
+  <!-- title -->
+  <text x="60" y="50" font-size="26" font-weight="700" fill="#0f172a">GraphKeeper — Database Schema</text>
+  <text x="60" y="76" font-size="13" fill="#475569">Contract tables · pgEnums · relationships — Drizzle ORM over Neon serverless Postgres · youngadults/graphkeeper · main @ 6918e6f · 2026-09-15</text>
+
+  <!-- connectors (drawn before boxes) -->
+  <g stroke="#94a3b8" stroke-width="2" fill="none">
+    <path d="M620 178 H566" marker-end="url(#arrow)"/>
+    <path d="M700 436 V384" marker-end="url(#arrow)"/>
+    <path d="M770 436 V384" marker-end="url(#arrow)"/>
+    <path d="M620 646 H598 V216 H566" marker-end="url(#arrow)"/>
+    <path d="M560 660 H586 V812 H616" stroke-dasharray="5 3" marker-end="url(#arrow)"/>
+  </g>
+  <g font-size="10" fill="#64748b">
+    <text x="590" y="170" text-anchor="middle">created_by</text>
+    <text x="712" y="412">source_id</text>
+    <text x="782" y="412">target_id</text>
+    <text x="590" y="208" text-anchor="middle">decided_by</text>
+  </g>
+  <text x="80" y="794" font-size="10" fill="#64748b">activity_log.entity_id → nodes | edges — polymorphic, no FK (dashed)</text>
+
+  <!-- users -->
+  <rect x="60" y="110" width="500" height="136" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <text x="80" y="136" font-size="15" font-weight="700" fill="#0f172a">users — who acts on the graph</text>
+  <text x="540" y="136" font-size="10" fill="#94a3b8" text-anchor="end">4 columns</text>
+  <line x1="61" y1="148" x2="559" y2="148" stroke="#e2e8f0"/>
+  <text x="80" y="168" font-size="11"><tspan font-weight="700" fill="#0f172a">id</tspan><tspan fill="#64748b"> · uuid · PK · default gen_random_uuid()</tspan></text>
+  <text x="80" y="190" font-size="11"><tspan font-weight="600" fill="#334155">name</tspan><tspan fill="#64748b"> · text · NOT NULL</tspan></text>
+  <text x="80" y="212" font-size="11"><tspan font-weight="600" fill="#334155">role</tspan><tspan fill="#64748b"> · user_role · default 'viewer' — viewer | analyst | admin</tspan></text>
+  <text x="80" y="234" font-size="11"><tspan font-weight="600" fill="#334155">color</tspan><tspan fill="#64748b"> · text · NOT NULL — header avatar</tspan></text>
+
+  <!-- imports -->
+  <rect x="60" y="286" width="500" height="202" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <text x="80" y="312" font-size="15" font-weight="700" fill="#0f172a">imports — bulk-import idempotency ledger</text>
+  <text x="540" y="312" font-size="10" fill="#94a3b8" text-anchor="end">7 columns</text>
+  <line x1="61" y1="324" x2="559" y2="324" stroke="#e2e8f0"/>
+  <text x="80" y="344" font-size="11"><tspan font-weight="700" fill="#0f172a">import_id</tspan><tspan fill="#64748b"> · text · PK — client-supplied idempotency key</tspan></text>
+  <text x="80" y="366" font-size="11"><tspan font-weight="600" fill="#334155">actor</tspan><tspan fill="#64748b"> · text · NOT NULL</tspan></text>
+  <text x="80" y="388" font-size="11"><tspan font-weight="600" fill="#334155">source</tspan><tspan fill="#64748b"> · text · NOT NULL — 'csv' | 'graph-json'</tspan></text>
+  <text x="80" y="410" font-size="11"><tspan font-weight="600" fill="#334155">filename</tspan><tspan fill="#64748b"> · text · NULL</tspan></text>
+  <text x="80" y="432" font-size="11"><tspan font-weight="600" fill="#334155">node_count</tspan><tspan fill="#64748b"> · integer · default 0</tspan></text>
+  <text x="80" y="454" font-size="11"><tspan font-weight="600" fill="#334155">edge_count</tspan><tspan fill="#64748b"> · integer · default 0</tspan></text>
+  <text x="80" y="476" font-size="11"><tspan font-weight="600" fill="#334155">created_at</tspan><tspan fill="#64748b"> · timestamptz · default now()</tspan></text>
+
+  <!-- activity_log -->
+  <rect x="60" y="548" width="500" height="224" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <text x="80" y="574" font-size="15" font-weight="700" fill="#0f172a">activity_log — append-only audit trail</text>
+  <text x="540" y="574" font-size="10" fill="#94a3b8" text-anchor="end">8 columns</text>
+  <line x1="61" y1="586" x2="559" y2="586" stroke="#e2e8f0"/>
+  <text x="80" y="606" font-size="11"><tspan font-weight="700" fill="#0f172a">id</tspan><tspan fill="#64748b"> · uuid · PK</tspan></text>
+  <text x="80" y="628" font-size="11"><tspan font-weight="600" fill="#334155">actor</tspan><tspan fill="#64748b"> · text · NOT NULL — user id or 'sim-ai' (no FK)</tspan></text>
+  <text x="80" y="650" font-size="11"><tspan font-weight="600" fill="#334155">action</tspan><tspan fill="#64748b"> · activity_action · NOT NULL</tspan></text>
+  <text x="80" y="672" font-size="11"><tspan font-weight="600" fill="#334155">entity_type</tspan><tspan fill="#64748b"> · activity_entity_type · NOT NULL</tspan></text>
+  <text x="80" y="694" font-size="11"><tspan font-weight="600" fill="#334155">entity_id</tspan><tspan fill="#64748b"> · uuid · NOT NULL — node or edge (no FK)</tspan></text>
+  <text x="80" y="716" font-size="11"><tspan font-weight="600" fill="#334155">before</tspan><tspan fill="#64748b"> · jsonb · NULL — snapshot before</tspan></text>
+  <text x="80" y="738" font-size="11"><tspan font-weight="600" fill="#334155">after</tspan><tspan fill="#64748b"> · jsonb · NULL — snapshot after</tspan></text>
+  <text x="80" y="760" font-size="11"><tspan font-weight="600" fill="#334155">created_at</tspan><tspan fill="#64748b"> · timestamptz · default now()</tspan></text>
+
+  <!-- enums card -->
+  <rect x="60" y="812" width="500" height="200" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <text x="80" y="840" font-size="15" font-weight="700" fill="#0f172a">5 Postgres enums (pgEnum)</text>
+  <text x="540" y="840" font-size="10" fill="#94a3b8" text-anchor="end">src/lib/db/schema.ts</text>
+  <rect x="80" y="850" width="210" height="48" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="94" y="869" font-size="11" font-weight="700" fill="#0f172a">user_role</text>
+  <text x="94" y="887" font-size="10" fill="#334155">viewer · analyst · admin</text>
+  <rect x="300" y="850" width="240" height="48" rx="8" fill="#fef3c7" stroke="#fcd34d"/>
+  <text x="314" y="869" font-size="11" font-weight="700" fill="#0f172a">edge_status</text>
+  <text x="314" y="887" font-size="10" fill="#334155">pending · approved · rejected · retired</text>
+  <rect x="80" y="906" width="210" height="48" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="94" y="925" font-size="11" font-weight="700" fill="#0f172a">edge_origin</text>
+  <text x="94" y="943" font-size="10" fill="#334155">manual · csv · graph-json · sim-ai</text>
+  <rect x="300" y="906" width="240" height="48" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <text x="314" y="925" font-size="11" font-weight="700" fill="#0f172a">activity_entity_type</text>
+  <text x="314" y="943" font-size="10" fill="#334155">node · edge</text>
+  <rect x="80" y="962" width="460" height="48" rx="8" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <text x="94" y="981" font-size="11" font-weight="700" fill="#0f172a">activity_action</text>
+  <text x="94" y="999" font-size="10" fill="#334155">create · update · delete · approve · reject · propose · retire · restore · import</text>
+
+  <!-- nodes -->
+  <rect x="620" y="110" width="520" height="268" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <text x="640" y="136" font-size="15" font-weight="700" fill="#0f172a">nodes — graph entities</text>
+  <text x="1120" y="136" font-size="10" fill="#94a3b8" text-anchor="end">10 columns</text>
+  <line x1="621" y1="148" x2="1139" y2="148" stroke="#e2e8f0"/>
+  <text x="640" y="168" font-size="11"><tspan font-weight="700" fill="#0f172a">id</tspan><tspan fill="#64748b"> · uuid · PK</tspan></text>
+  <text x="640" y="190" font-size="11"><tspan font-weight="600" fill="#334155">label</tspan><tspan fill="#64748b"> · text · NOT NULL</tspan></text>
+  <text x="640" y="212" font-size="11"><tspan font-weight="600" fill="#334155">type</tspan><tspan fill="#64748b"> · text · NOT NULL — person | project | system</tspan></text>
+  <text x="640" y="234" font-size="11"><tspan font-weight="600" fill="#334155">props</tspan><tspan fill="#64748b"> · jsonb · NOT NULL · default {}</tspan></text>
+  <text x="640" y="256" font-size="11"><tspan font-weight="700" fill="#2563eb">created_by</tspan><tspan fill="#64748b"> · uuid · NOT NULL → users.id</tspan></text>
+  <text x="640" y="278" font-size="11"><tspan font-weight="600" fill="#334155">created_at</tspan><tspan fill="#64748b"> · timestamptz · default now()</tspan></text>
+  <text x="640" y="300" font-size="11"><tspan font-weight="600" fill="#334155">updated_at</tspan><tspan fill="#64748b"> · timestamptz · default now()</tspan></text>
+  <text x="640" y="322" font-size="11"><tspan font-weight="600" fill="#334155">deleted_at</tspan><tspan fill="#64748b"> · timestamptz · NULL — soft delete</tspan></text>
+  <text x="640" y="344" font-size="11"><tspan font-weight="600" fill="#334155">origin</tspan><tspan fill="#64748b"> · edge_origin · default 'manual'</tspan></text>
+  <text x="640" y="366" font-size="11"><tspan font-weight="600" fill="#334155">origin_ref</tspan><tspan fill="#64748b"> · text · NULL — source filename (imports)</tspan></text>
+
+  <!-- edges -->
+  <rect x="620" y="438" width="520" height="384" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <text x="640" y="464" font-size="15" font-weight="700" fill="#0f172a">edges — relationships under governance</text>
+  <text x="1120" y="464" font-size="10" fill="#94a3b8" text-anchor="end">13 columns</text>
+  <line x1="621" y1="476" x2="1139" y2="476" stroke="#e2e8f0"/>
+  <text x="640" y="496" font-size="11"><tspan font-weight="700" fill="#0f172a">id</tspan><tspan fill="#64748b"> · uuid · PK</tspan></text>
+  <text x="640" y="518" font-size="11"><tspan font-weight="700" fill="#2563eb">source_id</tspan><tspan fill="#64748b"> · uuid · NOT NULL → nodes.id</tspan></text>
+  <text x="640" y="540" font-size="11"><tspan font-weight="700" fill="#2563eb">target_id</tspan><tspan fill="#64748b"> · uuid · NOT NULL → nodes.id</tspan></text>
+  <text x="640" y="562" font-size="11"><tspan font-weight="600" fill="#334155">type</tspan><tspan fill="#64748b"> · text · NOT NULL</tspan></text>
+  <text x="640" y="584" font-size="11"><tspan font-weight="600" fill="#334155">props</tspan><tspan fill="#64748b"> · jsonb · NOT NULL · default {}</tspan></text>
+  <text x="640" y="606" font-size="11"><tspan font-weight="600" fill="#334155">status</tspan><tspan fill="#64748b"> · edge_status · default 'pending'</tspan></text>
+  <text x="640" y="628" font-size="11"><tspan font-weight="600" fill="#334155">proposed_by</tspan><tspan fill="#64748b"> · text · NOT NULL — user id or 'sim-ai' (no FK)</tspan></text>
+  <text x="640" y="650" font-size="11"><tspan font-weight="700" fill="#2563eb">decided_by</tspan><tspan fill="#64748b"> · uuid · NULL → users.id</tspan></text>
+  <text x="640" y="672" font-size="11"><tspan font-weight="600" fill="#334155">decided_at</tspan><tspan fill="#64748b"> · timestamptz · NULL</tspan></text>
+  <text x="640" y="694" font-size="11"><tspan font-weight="600" fill="#334155">origin</tspan><tspan fill="#64748b"> · edge_origin · default 'manual'</tspan></text>
+  <text x="640" y="716" font-size="11"><tspan font-weight="600" fill="#334155">origin_ref</tspan><tspan fill="#64748b"> · text · NULL — source filename</tspan></text>
+  <text x="640" y="738" font-size="11"><tspan font-weight="600" fill="#334155">created_at</tspan><tspan fill="#64748b"> · timestamptz · default now()</tspan></text>
+  <text x="640" y="760" font-size="11"><tspan font-weight="600" fill="#334155">updated_at</tspan><tspan fill="#64748b"> · timestamptz · default now()</tspan></text>
+  <text x="640" y="782" font-size="10.5" fill="#475569">lifecycle: pending → approved | rejected · pending | approved → retired</text>
+  <text x="640" y="800" font-size="10.5" fill="#475569">rejected | retired → pending (restore, decision cleared) · new edges start pending</text>
+
+  <!-- store factory -->
+  <rect x="620" y="858" width="520" height="154" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <text x="640" y="886" font-size="15" font-weight="700" fill="#0f172a">Store factory — one GraphStore contract, two backends</text>
+  <rect x="640" y="898" width="480" height="44" rx="8" fill="#ecfdf5" stroke="#6ee7b7"/>
+  <text x="655" y="916" font-size="11" font-weight="700" fill="#0f172a">MemoryStore — demo mode (no POSTGRES_URL)</text>
+  <text x="655" y="934" font-size="10" fill="#334155">buildSeedGraph() in RAM · resets per server process</text>
+  <rect x="640" y="950" width="480" height="44" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+  <text x="655" y="968" font-size="11" font-weight="700" fill="#0f172a">Drizzle + Neon — Postgres mode</text>
+  <text x="655" y="986" font-size="10" fill="#334155">pooled serverless driver over HTTPS · SQL migrations in drizzle/</text>
+  <text x="640" y="1008" font-size="10.5" fill="#64748b">Both implement GraphStore (src/lib/db/store.ts) · storeMode() picks at boot · cached on globalThis</text>
+
+  <!-- footer -->
+  <text x="60" y="1032" font-size="12" font-weight="600" fill="#334155">One schema drives everything — src/lib/db/schema.ts feeds the Drizzle store, the versioned SQL migrations (drizzle/), and the app's TypeScript types.</text>
+  <text x="60" y="1052" font-size="11" fill="#64748b">Blue column names = FOREIGN KEY · proposed_by / actor / entity_id are deliberately plain text or uuid (user id or the 'sim-ai' sentinel) · every mutation appends to activity_log.</text>
+</svg>
