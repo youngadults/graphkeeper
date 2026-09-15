@@ -247,8 +247,11 @@ rows are skipped with a reason instead of failing the whole import.
 
 ## API
 
-All routes are Next.js route handlers under `src/app/api`, validated with zod, and
-return JSON. Mutations require the `x-gk-actor: <user-id>` header.
+All routes are Next.js route handlers under `src/app/api`, validated with zod,
+and return JSON. Mutations require the `x-gk-actor: <user-id>` header. This
+repo does not ship a generated Swagger/OpenAPI UI; the authoritative route
+contract lives in the `route.ts` files plus the server-side schemas in
+`src/lib/domain/validation.ts`.
 
 | Method              | Route                        | Purpose                                        |
 | ------------------- | ---------------------------- | ---------------------------------------------- |
