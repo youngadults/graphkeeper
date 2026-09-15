@@ -10,19 +10,26 @@ import type { Selection } from "@/components/workspace/WorkspaceProvider";
 // Initial load spreads nodes from scratch (randomize). Filter toggles re-use
 // the existing positions via a non-randomized pass so visible nodes keep their
 // relative arrangement while relaxing into the freed space.
+// fcose: faster, tighter force-directed layout than cose; params are a
+// first pass and may need visual tuning. The package ships no declarations,
+// so options beyond the base shape are typed locally.
 function layoutOptions(randomize: boolean): cytoscape.LayoutOptions {
+  // fcose: faster, tighter force-directed layout than cose; params are a
+  // first pass and may need visual tuning. cytoscape's LayoutOptions union
+  // predates the extension (which ships no declarations), so the options
+  // shape is bridged once here.
   return {
-    name: "cose",
+    name: "fcose",
     animate: true,
     animationDuration: 350,
     padding: 60,
     idealEdgeLength: () => 200,
-    edgeElasticity: () => 180,
-    nodeOverlap: 40,
-    gravity: 0.5,
-    numIter: 1500,
+    nodeRepulsion: 10000,
+    gravity: 0.35,
+    numIter: 2500,
+    spacingFactor: 1.2,
     randomize,
-  };
+  } as unknown as cytoscape.LayoutOptions;
 }
 
 const INITIAL_LAYOUT = layoutOptions(true);
@@ -313,6 +320,8 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
     let disposed = false;
     void (async () => {
       const lib = await import("cytoscape");
+      const fcose = (await import("cytoscape-fcose")).default;
+      lib.default.use(fcose);
       if (disposed || !containerRef.current) return;
       const cy = lib.default({
         container: containerRef.current,
