@@ -41,7 +41,7 @@ const STYLE: cytoscape.StylesheetJson = [
       "text-valign": "center",
       "text-halign": "center",
       "text-max-width": "60px",
-      "text-wrap": "ellipsis",
+      "text-wrap": "wrap",
       width: 88,
       height: 88,
       "border-width": 1.5,
