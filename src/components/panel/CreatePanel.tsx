@@ -40,7 +40,7 @@ export default function CreatePanel() {
 function NodeForm() {
   const { createNode, select } = useWorkspace();
   const [label, setLabel] = useState("");
-  const [type, setType] = useState("person");
+  const [type, setType] = useState("");
   const [propsText, setPropsText] = useState("");
   const [propsError, setPropsError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -112,7 +112,7 @@ function EdgeForm() {
   const { graph, createEdge, select } = useWorkspace();
   const [sourceId, setSourceId] = useState("");
   const [targetId, setTargetId] = useState("");
-  const [type, setType] = useState("works_on");
+  const [type, setType] = useState("");
   const [propsText, setPropsText] = useState("");
   const [propsError, setPropsError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
