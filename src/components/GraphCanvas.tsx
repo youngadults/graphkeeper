@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type cytoscape from "cytoscape";
 import type { ElementDefinition } from "cytoscape";
 import { nodeColor } from "@/lib/domain/types";
-import type { GraphEdge, GraphNode, GraphSnapshot } from "@/lib/domain/types";
+import type { EdgeStatus, GraphEdge, GraphNode, GraphSnapshot } from "@/lib/domain/types";
 import type { Selection } from "@/components/workspace/WorkspaceProvider";
 
 // Initial load spreads nodes from scratch (randomize). Filter toggles re-use
@@ -143,15 +143,29 @@ function typeCounts(nodes: GraphNode[]): TypeCount[] {
     .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
 }
 
+/** Dot colors for the edge-status filter pills, matching the edge styles. */
+const STATUS_DOT_COLORS: Record<EdgeStatus, string> = {
+  approved: "#94a3b8",
+  pending: "#8b5cf6",
+  rejected: "#f43f5e",
+  retired: "#cbd5e1",
+};
+
+const EDGE_STATUSES: EdgeStatus[] = ["approved", "pending", "rejected", "retired"];
+
 /**
- * Filter a snapshot to the currently visible types. A node is visible when its
- * type is not hidden; an edge is visible when both endpoints are visible.
+ * Filter a snapshot to the currently visible types and edge statuses. A node is
+ * visible when its type is not hidden; an edge is visible when both endpoints
+ * are visible and its status is not hidden.
  */
-function filteredSnapshot(graph: GraphSnapshot, hiddenTypes: Set<string>): GraphSnapshot {
+function filteredSnapshot(graph: GraphSnapshot, hiddenTypes: Set<string>, hiddenStatuses: Set<string>): GraphSnapshot {
   const visibleNodes = graph.nodes.filter((node) => !hiddenTypes.has(typeLabel(node.type)));
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
   const visibleEdges = graph.edges.filter(
-    (edge) => visibleIds.has(edge.sourceId) && visibleIds.has(edge.targetId),
+    (edge) =>
+      !hiddenStatuses.has(edge.status) &&
+      visibleIds.has(edge.sourceId) &&
+      visibleIds.has(edge.targetId),
   );
   return { nodes: visibleNodes, edges: visibleEdges };
 }
@@ -217,7 +231,9 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
   const selectRef = useRef(onSelect);
   const didInitialLayout = useRef(false);
   const hiddenTypesRef = useRef<Set<string>>(new Set());
+  const hiddenStatusesRef = useRef<Set<string>>(new Set());
   const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set());
+  const [hiddenStatuses, setHiddenStatuses] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     graphRef.current = graph;
@@ -230,14 +246,18 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
   }, [hiddenTypes]);
 
   useEffect(() => {
+    hiddenStatusesRef.current = hiddenStatuses;
+  }, [hiddenStatuses]);
+
+  useEffect(() => {
     selectRef.current = onSelect;
   }, [onSelect]);
 
   const types = useMemo(() => (graph ? typeCounts(graph.nodes) : []), [graph]);
   const filtered = useMemo(() => {
     if (!graph) return null;
-    return filteredSnapshot(graph, hiddenTypes);
-  }, [graph, hiddenTypes]);
+    return filteredSnapshot(graph, hiddenTypes, hiddenStatuses);
+  }, [graph, hiddenTypes, hiddenStatuses]);
   const allHidden = graph !== null && graph.nodes.length > 0 && filtered !== null && filtered.nodes.length === 0;
 
   function toggleType(type: string): void {
@@ -245,6 +265,15 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
       const next = new Set(prev);
       if (next.has(type)) next.delete(type);
       else next.add(type);
+      return next;
+    });
+  }
+
+  function toggleStatus(status: EdgeStatus): void {
+    setHiddenStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
       return next;
     });
   }
@@ -279,7 +308,7 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
         // Filters can only be hidden via the sync effect below (which runs after
         // mount), so reading the ref here is always the current, visible-agnostic
         // state. This effect intentionally runs once.
-        syncElements(cy, filteredSnapshot(initial, hiddenTypesRef.current));
+        syncElements(cy, filteredSnapshot(initial, hiddenTypesRef.current, hiddenStatusesRef.current));
         cy.layout(INITIAL_LAYOUT).run();
         cy.fit(undefined, 60);
         didInitialLayout.current = true;
@@ -381,9 +410,29 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
           );
         })}
         {types.length > 0 && <span className="mx-1 h-4 w-px bg-slate-200" />}
-        <span className="flex items-center gap-1"><span className="h-0.5 w-5 bg-slate-400" /> approved</span>
-        <span className="flex items-center gap-1"><span className="h-0.5 w-5 border-t-2 border-dashed border-violet-500" /> pending</span>
-        <span className="flex items-center gap-1"><span className="h-0.5 w-5 border-t-2 border-dashed border-rose-400" /> rejected</span>
+        {graph !== null && graph.edges.length > 0 && (
+          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-400">
+            Status
+          </span>
+        )}
+        {EDGE_STATUSES.map((status) => {
+          const hidden = hiddenStatuses.has(status);
+          return (
+            <button
+              key={status}
+              type="button"
+              aria-pressed={!hidden}
+              title={`${status} — click to ${hidden ? "show" : "hide"}`}
+              onClick={() => toggleStatus(status)}
+              className={`pointer-events-auto flex min-w-0 items-center gap-1 rounded-full px-2 py-0.5 transition-opacity ${
+                hidden ? "cursor-pointer opacity-40 line-through" : "cursor-pointer bg-slate-100"
+              }`}
+            >
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: STATUS_DOT_COLORS[status] }} />
+              <span className="capitalize">{status}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
