@@ -352,7 +352,12 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
           </p>
         </div>
       )}
-      <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-[11px] text-slate-600 shadow-sm">
+      <div className="pointer-events-none absolute top-3 left-3 flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-[11px] text-slate-600 shadow-sm">
+        {types.length > 0 && (
+          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-400">
+            Show
+          </span>
+        )}
         {types.map(({ type, count }) => {
           const hidden = hiddenTypes.has(type);
           return (
@@ -362,8 +367,10 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
               aria-pressed={!hidden}
               title={`${type} (${count}) — click to ${hidden ? "show" : "hide"}`}
               onClick={() => toggleType(type)}
-              className={`pointer-events-auto flex min-w-0 items-center gap-1 transition-opacity ${
-                hidden ? "cursor-pointer opacity-40 line-through" : "cursor-pointer"
+              className={`pointer-events-auto flex min-w-0 items-center gap-1 rounded-full px-2 py-0.5 transition-opacity ${
+                hidden
+                  ? "cursor-pointer opacity-40 line-through"
+                  : "cursor-pointer bg-slate-100"
               }`}
             >
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: nodeColor(type) }} />
