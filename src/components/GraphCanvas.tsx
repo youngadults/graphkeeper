@@ -17,6 +17,7 @@ function layoutOptions(randomize: boolean): cytoscape.LayoutOptions {
     animationDuration: 350,
     padding: 60,
     idealEdgeLength: () => 180,
+    edgeElasticity: () => 180,
     nodeOverlap: 40,
     gravity: 0.5,
     numIter: 1500,
@@ -38,6 +39,8 @@ const STYLE: cytoscape.StylesheetJson = [
       "font-size": 11,
       "text-valign": "bottom",
       "text-margin-y": 6,
+      "text-max-width": "80px",
+      "text-wrap": "none",
       width: 26,
       height: 26,
       "border-width": 1.5,
@@ -212,11 +215,18 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
   const graphRef = useRef<GraphSnapshot | null>(graph);
   const selectRef = useRef(onSelect);
   const didInitialLayout = useRef(false);
+  const hiddenTypesRef = useRef<Set<string>>(new Set());
   const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     graphRef.current = graph;
   }, [graph]);
+
+  // Keep a ref in sync so the single-shot mount effect can read the current
+  // filters without being re-created (it intentionally runs once).
+  useEffect(() => {
+    hiddenTypesRef.current = hiddenTypes;
+  }, [hiddenTypes]);
 
   useEffect(() => {
     selectRef.current = onSelect;
@@ -265,7 +275,10 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
       instanceRef.current = cy;
       const initial = graphRef.current;
       if (initial) {
-        syncElements(cy, filteredSnapshot(initial, hiddenTypes));
+        // Filters can only be hidden via the sync effect below (which runs after
+        // mount), so reading the ref here is always the current, visible-agnostic
+        // state. This effect intentionally runs once.
+        syncElements(cy, filteredSnapshot(initial, hiddenTypesRef.current));
         cy.layout(INITIAL_LAYOUT).run();
         cy.fit(undefined, 60);
         didInitialLayout.current = true;
@@ -276,7 +289,6 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
       instanceRef.current?.destroy();
       instanceRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync data on refreshes or filter changes; re-run the layout only when nodes changed.
@@ -292,16 +304,21 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
     }
   }, [filtered]);
 
-  // Keep canvas selection in sync with the side panel.
+  // Keep canvas selection in sync with the side panel. A selected node that is
+  // currently hidden by a filter is deselected rather than re-selected from the
+  // raw (unfiltered) set.
   useEffect(() => {
     const cy = instanceRef.current;
     if (!cy) return;
     cy.$(":selected").unselect();
-    if (selectedId) {
-      const element = cy.getElementById(selectedId);
-      if (element.nonempty()) element.select();
+    if (selectedId && filtered) {
+      const visible = filtered.nodes.some((node) => node.id === selectedId);
+      if (visible) {
+        const element = cy.getElementById(selectedId);
+        if (element.nonempty()) element.select();
+      }
     }
-  }, [selectedId, graph]);
+  }, [selectedId, filtered]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -342,6 +359,7 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
             <button
               key={type}
               type="button"
+              aria-pressed={!hidden}
               title={`${type} (${count}) — click to ${hidden ? "show" : "hide"}`}
               onClick={() => toggleType(type)}
               className={`pointer-events-auto flex min-w-0 items-center gap-1 transition-opacity ${
