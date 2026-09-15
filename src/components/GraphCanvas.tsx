@@ -1,27 +1,42 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type cytoscape from "cytoscape";
 import type { ElementDefinition } from "cytoscape";
 import { nodeColor } from "@/lib/domain/types";
-import type { GraphEdge, GraphNode, GraphSnapshot } from "@/lib/domain/types";
+import type { EdgeStatus, GraphEdge, GraphNode, GraphSnapshot } from "@/lib/domain/types";
 import type { Selection } from "@/components/workspace/WorkspaceProvider";
 
-const LAYOUT_OPTIONS: cytoscape.LayoutOptions = {
-  name: "cose",
-  animate: true,
-  animationDuration: 350,
-  padding: 36,
-  idealEdgeLength: () => 110,
-  edgeElasticity: () => 110,
-  nodeRepulsion: 18000,
-  componentSpacing: 32,
-  nodeOverlap: 26,
-  gravity: 0.24,
-  randomize: true,
-  numIter: 1300,
-  fit: true,
-};
+// Initial load spreads nodes from scratch (randomize). Filter toggles re-use
+// the existing positions via a non-randomized pass so visible nodes keep their
+// relative arrangement while relaxing into the freed space.
+// fcose: faster, tighter force-directed layout than cose; params are a
+// first pass and may need visual tuning. The package ships no declarations,
+// so options beyond the base shape are typed locally.
+function layoutOptions(randomize: boolean): cytoscape.LayoutOptions {
+  // fcose: faster, tighter force-directed layout than cose; params are a
+  // first pass and may need visual tuning. cytoscape's LayoutOptions union
+  // predates the extension (which ships no declarations), so the options
+  // shape is bridged once here.
+  return {
+    name: "fcose",
+    animate: true,
+    animationDuration: 350,
+    padding: 60,
+    idealEdgeLength: () => 200,
+    nodeRepulsion: 10000,
+    gravity: 0.35,
+    numIter: 2500,
+    spacingFactor: 1.2,
+    randomize,
+  } as unknown as cytoscape.LayoutOptions;
+}
+
+const INITIAL_LAYOUT = layoutOptions(true);
+const INCREMENTAL_LAYOUT = layoutOptions(false);
+
+// Edge labels hide below this zoom level to cut clutter when zoomed out.
+const EDGE_LABEL_MIN_ZOOM = 0.4;
 
 // cytoscape ships its own types: StylesheetJson = StylesheetJsonBlock[].
 const STYLE: cytoscape.StylesheetJson = [
@@ -30,14 +45,15 @@ const STYLE: cytoscape.StylesheetJson = [
     style: {
       "background-color": "data(color)",
       label: "data(label)",
-      color: "#334155",
-      "font-size": 11,
-      "text-valign": "bottom",
-      "text-margin-y": 6,
-      "text-max-width": "80px",
-      "text-wrap": "none",
-      width: 26,
-      height: 26,
+      color: "#ffffff",
+      "font-size": 10,
+      shape: "ellipse",
+      "text-valign": "center",
+      "text-halign": "center",
+      "text-max-width": "60px",
+      "text-wrap": "wrap",
+      width: 88,
+      height: 88,
       "border-width": 1.5,
       "border-color": "#94a3b8",
       "overlay-padding": 4,
@@ -100,6 +116,16 @@ const STYLE: cytoscape.StylesheetJson = [
     selector: "edge:selected",
     style: { width: 4, opacity: 1 },
   },
+  {
+    // Focus mode: dim everything outside the selected node's neighborhood.
+    selector: ".gk-dimmed",
+    style: { opacity: 0.12 },
+  },
+  {
+    // Edge labels hidden while zoomed out (see EDGE_LABEL_MIN_ZOOM).
+    selector: "edge.gk-labels-off",
+    style: { "text-opacity": 0 },
+  },
 ];
 
 function nodeDefinition(node: GraphNode): ElementDefinition {
@@ -113,6 +139,72 @@ function edgeDefinition(edge: GraphEdge): ElementDefinition {
     data: { id: edge.id, label: edge.type, source: edge.sourceId, target: edge.targetId },
     classes: edge.status,
   };
+}
+
+/** Human-readable label for a node type; falls back to a graceful unknown name. */
+function typeLabel(type: string): string {
+  return type.trim() === "" ? "unknown" : type;
+}
+
+interface TypeCount {
+  type: string;
+  count: number;
+}
+
+/** Distinct node types, with unknown types lumped under a graceful label, sorted by count desc. */
+function typeCounts(nodes: GraphNode[]): TypeCount[] {
+  const counts = new Map<string, number>();
+  for (const node of nodes) {
+    const label = typeLabel(node.type);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
+}
+
+/** Dot colors for the edge-status filter pills, matching the edge styles. */
+const STATUS_DOT_COLORS: Record<EdgeStatus, string> = {
+  approved: "#94a3b8",
+  pending: "#8b5cf6",
+  rejected: "#f43f5e",
+  retired: "#cbd5e1",
+};
+
+const EDGE_STATUSES: EdgeStatus[] = ["approved", "pending", "rejected", "retired"];
+
+/** Toggle edge-label visibility based on the current zoom. */
+function syncEdgeLabelVisibility(cy: cytoscape.Core): void {
+  const off = cy.zoom() < EDGE_LABEL_MIN_ZOOM;
+  cy.edges().toggleClass("gk-labels-off", off);
+}
+
+/**
+ * Focus mode: dim everything outside a selected node's closed neighborhood.
+ * No selection, or a non-node selection, clears the dimming.
+ */
+function applyFocusDim(cy: cytoscape.Core, element: cytoscape.SingularElementArgument | null): void {
+  cy.$(".gk-dimmed").removeClass("gk-dimmed");
+  if (!element || !element.isNode()) return;
+  const node = element as cytoscape.NodeSingular;
+  cy.elements().difference(node.closedNeighborhood()).addClass("gk-dimmed");
+}
+
+/**
+ * Filter a snapshot to the currently visible types and edge statuses. A node is
+ * visible when its type is not hidden; an edge is visible when both endpoints
+ * are visible and its status is not hidden.
+ */
+function filteredSnapshot(graph: GraphSnapshot, hiddenTypes: Set<string>, hiddenStatuses: Set<string>): GraphSnapshot {
+  const visibleNodes = graph.nodes.filter((node) => !hiddenTypes.has(typeLabel(node.type)));
+  const visibleIds = new Set(visibleNodes.map((node) => node.id));
+  const visibleEdges = graph.edges.filter(
+    (edge) =>
+      !hiddenStatuses.has(edge.status) &&
+      visibleIds.has(edge.sourceId) &&
+      visibleIds.has(edge.targetId),
+  );
+  return { nodes: visibleNodes, edges: visibleEdges };
 }
 
 /** Sync the cytoscape graph with a snapshot; returns true when nodes changed. */
@@ -175,20 +267,61 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
   const graphRef = useRef<GraphSnapshot | null>(graph);
   const selectRef = useRef(onSelect);
   const didInitialLayout = useRef(false);
+  const hiddenTypesRef = useRef<Set<string>>(new Set());
+  const hiddenStatusesRef = useRef<Set<string>>(new Set());
+  const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set());
+  const [hiddenStatuses, setHiddenStatuses] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     graphRef.current = graph;
   }, [graph]);
 
+  // Keep a ref in sync so the single-shot mount effect can read the current
+  // filters without being re-created (it intentionally runs once).
+  useEffect(() => {
+    hiddenTypesRef.current = hiddenTypes;
+  }, [hiddenTypes]);
+
+  useEffect(() => {
+    hiddenStatusesRef.current = hiddenStatuses;
+  }, [hiddenStatuses]);
+
   useEffect(() => {
     selectRef.current = onSelect;
   }, [onSelect]);
+
+  const types = useMemo(() => (graph ? typeCounts(graph.nodes) : []), [graph]);
+  const filtered = useMemo(() => {
+    if (!graph) return null;
+    return filteredSnapshot(graph, hiddenTypes, hiddenStatuses);
+  }, [graph, hiddenTypes, hiddenStatuses]);
+  const allHidden = graph !== null && graph.nodes.length > 0 && filtered !== null && filtered.nodes.length === 0;
+
+  function toggleType(type: string): void {
+    setHiddenTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }
+
+  function toggleStatus(status: EdgeStatus): void {
+    setHiddenStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+  }
 
   // Create the instance once (cytoscape is loaded dynamically to keep SSR clean).
   useEffect(() => {
     let disposed = false;
     void (async () => {
       const lib = await import("cytoscape");
+      const fcose = (await import("cytoscape-fcose")).default;
+      lib.default.use(fcose);
       if (disposed || !containerRef.current) return;
       const cy = lib.default({
         container: containerRef.current,
@@ -199,20 +332,31 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
       });
       cy.on("tap", "node", (event) => {
         const node = event.target as cytoscape.NodeSingular;
+        applyFocusDim(cy, node);
         selectRef.current({ kind: "node", id: node.id() });
       });
       cy.on("tap", "edge", (event) => {
         const edge = event.target as cytoscape.EdgeSingular;
+        applyFocusDim(cy, null);
         selectRef.current({ kind: "edge", id: edge.id() });
       });
       cy.on("tap", (event) => {
-        if (event.target === cy) selectRef.current(null);
+        if (event.target === cy) {
+          applyFocusDim(cy, null);
+          selectRef.current(null);
+        }
       });
+      cy.on("zoom", () => syncEdgeLabelVisibility(cy));
       instanceRef.current = cy;
-      if (graphRef.current) {
-        syncElements(cy, graphRef.current);
-        cy.layout(LAYOUT_OPTIONS).run();
-        cy.fit(undefined, 100);
+      const initial = graphRef.current;
+      if (initial) {
+        // Filters can only be hidden via the sync effect below (which runs after
+        // mount), so reading the ref here is always the current, visible-agnostic
+        // state. This effect intentionally runs once.
+        syncElements(cy, filteredSnapshot(initial, hiddenTypesRef.current, hiddenStatusesRef.current));
+        cy.layout(INITIAL_LAYOUT).run();
+        cy.fit(undefined, 60);
+        syncEdgeLabelVisibility(cy);
         didInitialLayout.current = true;
       }
     })();
@@ -223,27 +367,39 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
     };
   }, []);
 
-  // Sync data on refreshes; re-run the force layout only when nodes changed.
+  // Sync data on refreshes or filter changes; re-run the layout only when nodes changed.
   useEffect(() => {
     const cy = instanceRef.current;
-    if (!cy || !graph) return;
-    const structural = syncElements(cy, graph);
+    if (!cy || !filtered) return;
+    const structural = syncElements(cy, filtered);
     if (structural) {
-      cy.layout(LAYOUT_OPTIONS).run();
-      cy.fit(undefined, 40);
+      const options = didInitialLayout.current ? INCREMENTAL_LAYOUT : INITIAL_LAYOUT;
+      didInitialLayout.current = true;
+      cy.layout(options).run();
+      cy.fit(undefined, 60);
+      syncEdgeLabelVisibility(cy);
     }
-  }, [graph]);
+  }, [filtered]);
 
-  // Keep canvas selection in sync with the side panel.
+  // Keep canvas selection in sync with the side panel. A selected node that is
+  // currently hidden by a filter is deselected rather than re-selected from the
+  // raw (unfiltered) set.
   useEffect(() => {
     const cy = instanceRef.current;
     if (!cy) return;
     cy.$(":selected").unselect();
-    if (selectedId) {
-      const element = cy.getElementById(selectedId);
-      if (element.nonempty()) element.select();
+    applyFocusDim(cy, null);
+    if (selectedId && filtered) {
+      const visible = filtered.nodes.some((node) => node.id === selectedId);
+      if (visible) {
+        const element = cy.getElementById(selectedId);
+        if (element.nonempty()) {
+          element.select();
+          applyFocusDim(cy, element);
+        }
+      }
     }
-  }, [selectedId, graph]);
+  }, [selectedId, filtered]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -252,7 +408,7 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
       const cy = instanceRef.current;
       if (!cy) return;
       cy.resize();
-      cy.fit(undefined, 40);
+      cy.fit(undefined, 60);
     });
     observer.observe(container);
     return () => observer.disconnect();
@@ -270,14 +426,64 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
           </p>
         </div>
       )}
-      <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-[11px] text-slate-600 shadow-sm">
-        <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-blue-600" /> person</span>
-        <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-amber-600" /> project</span>
-        <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-violet-600" /> system</span>
-        <span className="mx-1 h-4 w-px bg-slate-200" />
-        <span className="flex items-center gap-1"><span className="h-0.5 w-5 bg-slate-400" /> approved</span>
-        <span className="flex items-center gap-1"><span className="h-0.5 w-5 border-t-2 border-dashed border-violet-500" /> pending</span>
-        <span className="flex items-center gap-1"><span className="h-0.5 w-5 border-t-2 border-dashed border-rose-400" /> rejected</span>
+      {!empty && allHidden && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <p className="rounded-lg bg-white px-4 py-3 text-sm text-slate-500 shadow-sm">
+            No nodes match the current filter — click a chip to restore.
+          </p>
+        </div>
+      )}
+      <div className="pointer-events-none absolute top-3 left-3 flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-[11px] text-slate-600 shadow-sm">
+        {types.length > 0 && (
+          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-400">
+            Show
+          </span>
+        )}
+        {types.map(({ type, count }) => {
+          const hidden = hiddenTypes.has(type);
+          return (
+            <button
+              key={type}
+              type="button"
+              aria-pressed={!hidden}
+              title={`${type} (${count}) — click to ${hidden ? "show" : "hide"}`}
+              onClick={() => toggleType(type)}
+              className={`pointer-events-auto flex min-w-0 items-center gap-1 rounded-full px-2 py-0.5 transition-opacity ${
+                hidden
+                  ? "cursor-pointer opacity-40 line-through"
+                  : "cursor-pointer bg-slate-100"
+              }`}
+            >
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: nodeColor(type) }} />
+              <span className="truncate">{type}</span>
+              <span className="text-slate-400">{count}</span>
+            </button>
+          );
+        })}
+        {types.length > 0 && <span className="mx-1 h-4 w-px bg-slate-200" />}
+        {graph !== null && graph.edges.length > 0 && (
+          <span className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-400">
+            Status
+          </span>
+        )}
+        {EDGE_STATUSES.map((status) => {
+          const hidden = hiddenStatuses.has(status);
+          return (
+            <button
+              key={status}
+              type="button"
+              aria-pressed={!hidden}
+              title={`${status} — click to ${hidden ? "show" : "hide"}`}
+              onClick={() => toggleStatus(status)}
+              className={`pointer-events-auto flex min-w-0 items-center gap-1 rounded-full px-2 py-0.5 transition-opacity ${
+                hidden ? "cursor-pointer opacity-40 line-through" : "cursor-pointer bg-slate-100"
+              }`}
+            >
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: STATUS_DOT_COLORS[status] }} />
+              <span className="capitalize">{status}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
