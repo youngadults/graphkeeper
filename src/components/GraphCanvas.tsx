@@ -28,6 +28,9 @@ function layoutOptions(randomize: boolean): cytoscape.LayoutOptions {
 const INITIAL_LAYOUT = layoutOptions(true);
 const INCREMENTAL_LAYOUT = layoutOptions(false);
 
+// Edge labels hide below this zoom level to cut clutter when zoomed out.
+const EDGE_LABEL_MIN_ZOOM = 0.4;
+
 // cytoscape ships its own types: StylesheetJson = StylesheetJsonBlock[].
 const STYLE: cytoscape.StylesheetJson = [
   {
@@ -106,6 +109,16 @@ const STYLE: cytoscape.StylesheetJson = [
     selector: "edge:selected",
     style: { width: 4, opacity: 1 },
   },
+  {
+    // Focus mode: dim everything outside the selected node's neighborhood.
+    selector: ".gk-dimmed",
+    style: { opacity: 0.12 },
+  },
+  {
+    // Edge labels hidden while zoomed out (see EDGE_LABEL_MIN_ZOOM).
+    selector: "edge.gk-labels-off",
+    style: { "text-opacity": 0 },
+  },
 ];
 
 function nodeDefinition(node: GraphNode): ElementDefinition {
@@ -152,6 +165,23 @@ const STATUS_DOT_COLORS: Record<EdgeStatus, string> = {
 };
 
 const EDGE_STATUSES: EdgeStatus[] = ["approved", "pending", "rejected", "retired"];
+
+/** Toggle edge-label visibility based on the current zoom. */
+function syncEdgeLabelVisibility(cy: cytoscape.Core): void {
+  const off = cy.zoom() < EDGE_LABEL_MIN_ZOOM;
+  cy.edges().toggleClass("gk-labels-off", off);
+}
+
+/**
+ * Focus mode: dim everything outside a selected node's closed neighborhood.
+ * No selection, or a non-node selection, clears the dimming.
+ */
+function applyFocusDim(cy: cytoscape.Core, element: cytoscape.SingularElementArgument | null): void {
+  cy.$(".gk-dimmed").removeClass("gk-dimmed");
+  if (!element || !element.isNode()) return;
+  const node = element as cytoscape.NodeSingular;
+  cy.elements().difference(node.closedNeighborhood()).addClass("gk-dimmed");
+}
 
 /**
  * Filter a snapshot to the currently visible types and edge statuses. A node is
@@ -293,15 +323,21 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
       });
       cy.on("tap", "node", (event) => {
         const node = event.target as cytoscape.NodeSingular;
+        applyFocusDim(cy, node);
         selectRef.current({ kind: "node", id: node.id() });
       });
       cy.on("tap", "edge", (event) => {
         const edge = event.target as cytoscape.EdgeSingular;
+        applyFocusDim(cy, null);
         selectRef.current({ kind: "edge", id: edge.id() });
       });
       cy.on("tap", (event) => {
-        if (event.target === cy) selectRef.current(null);
+        if (event.target === cy) {
+          applyFocusDim(cy, null);
+          selectRef.current(null);
+        }
       });
+      cy.on("zoom", () => syncEdgeLabelVisibility(cy));
       instanceRef.current = cy;
       const initial = graphRef.current;
       if (initial) {
@@ -311,6 +347,7 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
         syncElements(cy, filteredSnapshot(initial, hiddenTypesRef.current, hiddenStatusesRef.current));
         cy.layout(INITIAL_LAYOUT).run();
         cy.fit(undefined, 60);
+        syncEdgeLabelVisibility(cy);
         didInitialLayout.current = true;
       }
     })();
@@ -331,6 +368,7 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
       didInitialLayout.current = true;
       cy.layout(options).run();
       cy.fit(undefined, 60);
+      syncEdgeLabelVisibility(cy);
     }
   }, [filtered]);
 
@@ -341,11 +379,15 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
     const cy = instanceRef.current;
     if (!cy) return;
     cy.$(":selected").unselect();
+    applyFocusDim(cy, null);
     if (selectedId && filtered) {
       const visible = filtered.nodes.some((node) => node.id === selectedId);
       if (visible) {
         const element = cy.getElementById(selectedId);
-        if (element.nonempty()) element.select();
+        if (element.nonempty()) {
+          element.select();
+          applyFocusDim(cy, element);
+        }
       }
     }
   }, [selectedId, filtered]);
