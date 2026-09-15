@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { WorkspaceProvider, useWorkspace } from "@/components/workspace/WorkspaceProvider";
 import Header from "@/components/Header";
 import GraphCanvas from "@/components/GraphCanvas";
@@ -21,6 +22,41 @@ function Toast() {
 
 function Shell() {
   const { graph, loading, error, selection, select } = useWorkspace();
+  const [panelWidth, setPanelWidth] = useState(400);
+  const resizeState = useRef({ isDragging: false, startX: 0, startWidth: 400 });
+
+  useEffect(() => {
+    const handleMove = (event: MouseEvent) => {
+      if (!resizeState.current.isDragging) return;
+
+      const dx = event.clientX - resizeState.current.startX;
+      const nextWidth = resizeState.current.startWidth - dx;
+      setPanelWidth(Math.min(Math.max(nextWidth, 280), 760));
+    };
+
+    const stopDragging = () => {
+      resizeState.current.isDragging = false;
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", stopDragging);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", stopDragging);
+    };
+  }, []);
+
+  const startResize = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (event.button !== 0) return;
+
+    resizeState.current = {
+      isDragging: true,
+      startX: event.clientX,
+      startWidth: panelWidth,
+    };
+  };
 
   return (
     <div className="flex h-screen flex-col">
@@ -39,9 +75,22 @@ function Shell() {
             </div>
           )}
         </div>
-        <aside className="gk-scroll w-full shrink-0 overflow-y-auto border-t border-slate-200 bg-white lg:w-[400px] lg:border-l lg:border-t-0">
-          <SidePanel />
-        </aside>
+
+        <div className="flex shrink-0">
+          <div
+            className="w-2 cursor-col-resize border-l border-slate-200 bg-slate-50 hover:bg-slate-100"
+            onMouseDown={startResize}
+            title="Drag to resize the side panel"
+            aria-label="Resize side panel"
+            role="separator"
+          />
+          <aside
+            className="gk-scroll w-full shrink-0 overflow-y-auto border-t border-slate-200 bg-white lg:border-l lg:border-t-0"
+            style={{ width: `${panelWidth}px` }}
+          >
+            <SidePanel />
+          </aside>
+        </div>
       </div>
       <Toast />
     </div>

@@ -11,10 +11,16 @@ const LAYOUT_OPTIONS: cytoscape.LayoutOptions = {
   name: "cose",
   animate: true,
   animationDuration: 350,
-  padding: 40,
+  padding: 36,
   idealEdgeLength: () => 110,
-  nodeOverlap: 24,
+  edgeElasticity: () => 110,
+  nodeRepulsion: 18000,
+  componentSpacing: 32,
+  nodeOverlap: 26,
+  gravity: 0.24,
   randomize: true,
+  numIter: 1300,
+  fit: true,
 };
 
 // cytoscape ships its own types: StylesheetJson = StylesheetJsonBlock[].
@@ -28,6 +34,8 @@ const STYLE: cytoscape.StylesheetJson = [
       "font-size": 11,
       "text-valign": "bottom",
       "text-margin-y": 6,
+      "text-max-width": "80px",
+      "text-wrap": "none",
       width: 26,
       height: 26,
       "border-width": 1.5,
@@ -204,7 +212,7 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
       if (graphRef.current) {
         syncElements(cy, graphRef.current);
         cy.layout(LAYOUT_OPTIONS).run();
-        cy.fit(undefined, 40);
+        cy.fit(undefined, 100);
         didInitialLayout.current = true;
       }
     })();
@@ -240,7 +248,12 @@ export default function GraphCanvas({ graph, selectedId, onSelect }: GraphCanvas
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const observer = new ResizeObserver(() => instanceRef.current?.resize());
+    const observer = new ResizeObserver(() => {
+      const cy = instanceRef.current;
+      if (!cy) return;
+      cy.resize();
+      cy.fit(undefined, 40);
+    });
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
